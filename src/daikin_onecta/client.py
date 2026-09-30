@@ -92,6 +92,22 @@ class OnectaClient:
         except (TypeError, ValueError) as err:
             raise OnectaApiError(200, "Invalid gateway device data") from err
 
+    async def set_schedule(
+        self,
+        gateway_id: str,
+        management_point_id: str,
+        mode: str,
+        schedule: str,
+    ) -> None:
+        """Select a configured schedule for a management-point mode."""
+        await self.patch_characteristic(
+            gateway_id,
+            management_point_id,
+            "schedule",
+            schedule,
+            path=f"/modes/{mode}/currentSchedule",
+        )
+
     async def patch_characteristic(
         self,
         gateway_id: str,
