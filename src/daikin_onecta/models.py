@@ -311,10 +311,11 @@ class ConsumptionSource(ConsumptionByPurpose):
 
 @dataclass(slots=True)
 class ConsumptionData(OnectaModel):
-    """Consumption grouped by energy source."""
+    """Energy data grouped by energy source."""
 
     electrical: ConsumptionSource | None = None
     gas: ConsumptionSource | None = None
+    thermal: ConsumptionSource | None = None
 
 
 @dataclass(slots=True)
