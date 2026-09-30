@@ -100,12 +100,11 @@ class OnectaClient:
         schedule: str,
     ) -> None:
         """Select a configured schedule for a management-point mode."""
-        await self.patch_characteristic(
+        await self.put_management_point(
             gateway_id,
             management_point_id,
-            "schedule",
-            schedule,
-            path=f"/modes/{mode}/currentSchedule",
+            f"schedule/{mode}/current",
+            {"scheduleId": schedule, "enabled": True},
         )
 
     async def patch_characteristic(
