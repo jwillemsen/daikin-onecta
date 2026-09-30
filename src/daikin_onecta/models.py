@@ -1,6 +1,7 @@
 """Models returned by the Daikin Onecta API."""
 
 from dataclasses import dataclass
+from dataclasses import field
 from typing import Any
 from typing import Generic
 from typing import TypeVar
@@ -345,6 +346,44 @@ class ManagementPoint(OnectaModel):
     schedule: Characteristic[Schedule] | None = None
     consumption_data: Characteristic[ConsumptionData] | None = None
     holiday_mode: Characteristic[HolidayMode] | None = None
+    characteristics: dict[str, Characteristic[Any]] = field(default_factory=dict)
+
+    @classmethod
+    def __pre_deserialize__(cls, data: dict[str, Any]) -> dict[str, Any]:
+        """Collect unmodeled simple characteristics before deserialization."""
+        data = dict(data)
+        known = {
+            "embeddedId",
+            "managementPointType",
+            "managementPointCategory",
+            "managementPointSubType",
+            "name",
+            "operationMode",
+            "onOffMode",
+            "softwareVersion",
+            "firmwareVersion",
+            "modelInfo",
+            "serialNumber",
+            "errorCode",
+            "isInErrorState",
+            "isInWarningState",
+            "isInCautionState",
+            "temperatureControl",
+            "sensoryData",
+            "fanControl",
+            "schedule",
+            "consumptionData",
+            "holidayMode",
+        }
+        data["characteristics"] = {
+            name: value
+            for name, value in data.items()
+            if name not in known
+            and isinstance(value, dict)
+            and "value" in value
+            and not isinstance(value["value"], dict)
+        }
+        return data
 
     class Config(OnectaModel.Config):
         """Mashumaro configuration."""
@@ -372,34 +411,41 @@ class ManagementPoint(OnectaModel):
         }
 
     def characteristic(self, name: str) -> Characteristic[Any] | None:
-        """Return any simple characteristic by its Daikin API name.
-
-        This supports entity discovery for characteristics that don't need a
-        dedicated semantic model while keeping complex values explicitly typed.
-        """
-        data = self.to_dict(by_alias=True)
-        value = data.get(name)
-        if not isinstance(value, dict) or "value" not in value:
-            return None
-        if isinstance(value["value"], dict):
-            return None
-        return Characteristic[Any].from_dict(value)
+        """Return a characteristic by its Daikin API name."""
+        modeled = {
+            "name": self.name,
+            "operationMode": self.operation_mode,
+            "onOffMode": self.on_off_mode,
+            "softwareVersion": self.software_version,
+            "firmwareVersion": self.firmware_version,
+            "modelInfo": self.model_info,
+            "serialNumber": self.serial_number,
+            "errorCode": self.error_code,
+            "isInErrorState": self.is_in_error_state,
+            "isInWarningState": self.is_in_warning_state,
+            "isInCautionState": self.is_in_caution_state,
+        }
+        return modeled.get(name) or self.characteristics.get(name)
 
     def simple_characteristics(self) -> dict[str, Characteristic[Any]]:
-        """Return all scalar/list-valued characteristics on this management point."""
-        metadata = {
-            "embeddedId",
-            "managementPointType",
-            "managementPointCategory",
-            "managementPointSubType",
-        }
-        result: dict[str, Characteristic[Any]] = {}
-        for name, value in self.to_dict(by_alias=True).items():
-            if name in metadata or not isinstance(value, dict) or "value" not in value:
-                continue
-            if isinstance(value["value"], dict):
-                continue
-            result[name] = Characteristic[Any].from_dict(value)
+        """Return scalar/list-valued characteristics for entity discovery."""
+        result = dict(self.characteristics)
+        for name in (
+            "name",
+            "operationMode",
+            "onOffMode",
+            "softwareVersion",
+            "firmwareVersion",
+            "modelInfo",
+            "serialNumber",
+            "errorCode",
+            "isInErrorState",
+            "isInWarningState",
+            "isInCautionState",
+        ):
+            characteristic = self.characteristic(name)
+            if characteristic is not None:
+                result[name] = characteristic
         return result
 
 
