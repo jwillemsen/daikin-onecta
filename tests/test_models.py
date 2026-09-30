@@ -82,6 +82,36 @@ def test_temperature_control_model(snapshot: SnapshotAssertion) -> None:
     } == snapshot
 
 
+def test_schedule_selections(snapshot: SnapshotAssertion) -> None:
+    """Expose only configured schedule selection, not schedule actions."""
+    devices = load_devices("altherma.json")
+    climate = next(
+        point
+        for device in devices
+        for point in device.management_points
+        if point.management_point_type == "climateControl" and point.schedule is not None
+    )
+    schedule = climate.schedule
+    assert schedule is not None
+
+    assert [selection.to_dict() for selection in schedule.value.selections] == snapshot
+
+
+def test_holiday_mode(snapshot: SnapshotAssertion) -> None:
+    """Deserialize the small holiday-mode value structure."""
+    devices = load_devices("gas.json")
+    climate = next(
+        point
+        for device in devices
+        for point in device.management_points
+        if point.management_point_type == "climateControl" and point.holiday_mode is not None
+    )
+    holiday = climate.holiday_mode
+    assert holiday is not None
+
+    assert holiday.value.to_dict() == snapshot
+
+
 @pytest.mark.parametrize("fixture", DEVICE_FIXTURES)
 def test_all_existing_device_fixtures(fixture: str, snapshot: SnapshotAssertion) -> None:
     """Deserialize every existing real-world fixture into the common typed model."""
