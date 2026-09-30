@@ -1,9 +1,9 @@
 """Client for the Daikin Onecta cloud API."""
 
 import asyncio
+import json
 from collections.abc import Awaitable
 from collections.abc import Callable
-import json
 from typing import Any
 
 import aiohttp
@@ -104,7 +104,8 @@ class OnectaClient:
             body["path"] = path
         await self._request(
             "PATCH",
-            f"/v1/gateway-devices/{gateway_id}/management-points/{management_point_id}/characteristics/{characteristic}",
+            f"/v1/gateway-devices/{gateway_id}/management-points/{management_point_id}"
+            f"/characteristics/{characteristic}",
             json_data=body,
         )
 
