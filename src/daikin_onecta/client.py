@@ -15,7 +15,7 @@ from .exceptions import OnectaRateLimitError
 from .models import GatewayDevice
 from .rate_limit import RateLimit
 
-ONecta_API_URL = "https://api.onecta.daikineurope.com"
+ONECTA_API_URL = "https://api.onecta.daikineurope.com"
 
 
 class OnectaClient:
@@ -26,7 +26,7 @@ class OnectaClient:
         session: aiohttp.ClientSession,
         token_provider: Callable[[], Awaitable[str]],
         *,
-        base_url: str = ONecta_API_URL,
+        base_url: str = ONECTA_API_URL,
     ) -> None:
         """Initialize the client."""
         self._session = session
