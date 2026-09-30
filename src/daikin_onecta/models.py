@@ -349,6 +349,7 @@ class ManagementPoint(OnectaModel):
     fan_control: Characteristic[FanControl] | None = None
     schedule: Characteristic[Schedule] | None = None
     consumption_data: Characteristic[ConsumptionData] | None = None
+    output_data: Characteristic[ConsumptionData] | None = None
     holiday_mode: Characteristic[HolidayMode] | None = None
     characteristics: dict[str, Characteristic[Any]] = field(default_factory=dict)
 
@@ -381,6 +382,7 @@ class ManagementPoint(OnectaModel):
             "fanControl",
             "schedule",
             "consumptionData",
+            "outputData",
             "holidayMode",
         }
         data["characteristics"] = {
@@ -419,6 +421,7 @@ class ManagementPoint(OnectaModel):
             "sensory_data": "sensoryData",
             "fan_control": "fanControl",
             "consumption_data": "consumptionData",
+            "output_data": "outputData",
             "holiday_mode": "holidayMode",
         }
 
