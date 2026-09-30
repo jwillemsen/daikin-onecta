@@ -87,7 +87,10 @@ class OnectaClient:
         data = await self._request("GET", "/v1/gateway-devices")
         if not isinstance(data, list):
             raise OnectaApiError(200, "Expected a list of gateway devices")
-        return data
+        try:
+            return [GatewayDevice.from_dict(device) for device in data]
+        except (TypeError, ValueError) as err:
+            raise OnectaApiError(200, "Invalid gateway device data") from err
 
     async def patch_characteristic(
         self,
