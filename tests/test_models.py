@@ -57,6 +57,31 @@ def test_characteristic_aliases(snapshot: SnapshotAssertion) -> None:
     assert characteristic.to_dict() == snapshot
 
 
+def test_temperature_control_model(snapshot: SnapshotAssertion) -> None:
+    """Deserialize nested temperature-control setpoints into typed models."""
+    devices = load_devices("altherma.json")
+    climate = next(
+        point
+        for device in devices
+        for point in device.management_points
+        if point.management_point_type == "climateControl" and point.temperature_control is not None
+    )
+    temperature_control = climate.temperature_control
+    assert temperature_control is not None
+
+    heating = temperature_control.value.operation_modes["heating"]
+    room = heating.setpoints["roomTemperature"]
+
+    assert {
+        "value": room.value,
+        "settable": room.settable,
+        "min_value": room.min_value,
+        "max_value": room.max_value,
+        "step_value": room.step_value,
+        "operation_modes": sorted(temperature_control.value.operation_modes),
+    } == snapshot
+
+
 @pytest.mark.parametrize("fixture", DEVICE_FIXTURES)
 def test_all_existing_device_fixtures(fixture: str, snapshot: SnapshotAssertion) -> None:
     """Deserialize every existing real-world fixture into the common typed model."""
