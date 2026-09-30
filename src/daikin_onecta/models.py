@@ -88,6 +88,65 @@ class TemperatureControl(OnectaModel):
 
 
 @dataclass(slots=True)
+class ScheduleSelection(OnectaModel):
+    """A selectable schedule for one Daikin schedule mode."""
+
+    mode: str
+    selected: str
+    available: list[str]
+    settable: bool
+
+
+@dataclass(slots=True)
+class Schedule(OnectaModel):
+    """Schedule data used to select a configured schedule."""
+
+    current_mode: Characteristic[str] | None = None
+    modes: dict[str, dict[str, Any]] | None = None
+
+    class Config(OnectaModel.Config):
+        """Mashumaro configuration."""
+
+        aliases = {"current_mode": "currentMode"}
+
+    @property
+    def selections(self) -> list[ScheduleSelection]:
+        """Return selectable schedules without exposing schedule actions."""
+        result: list[ScheduleSelection] = []
+        for mode, mode_data in (self.modes or {}).items():
+            current = mode_data.get("currentSchedule")
+            if not isinstance(current, dict):
+                continue
+            selected = current.get("value")
+            available = current.get("values")
+            if not isinstance(selected, str) or not isinstance(available, list):
+                continue
+            result.append(
+                ScheduleSelection(
+                    mode=mode,
+                    selected=selected,
+                    available=[value for value in available if isinstance(value, str)],
+                    settable=bool(current.get("settable", False)),
+                )
+            )
+        return result
+
+
+@dataclass(slots=True)
+class HolidayMode(OnectaModel):
+    """Holiday mode state."""
+
+    enabled: bool
+    start_date: str | None = None
+    end_date: str | None = None
+
+    class Config(OnectaModel.Config):
+        """Mashumaro configuration."""
+
+        aliases = {"start_date": "startDate", "end_date": "endDate"}
+
+
+@dataclass(slots=True)
 class SensoryData(OnectaModel):
     """Named sensor characteristics exposed by a management point."""
 
@@ -133,9 +192,9 @@ class ManagementPoint(OnectaModel):
     temperature_control: Characteristic[TemperatureControl] | None = None
     sensory_data: Characteristic[dict[str, Any]] | None = None
     fan_control: Characteristic[dict[str, Any]] | None = None
-    schedule: Characteristic[dict[str, Any]] | None = None
+    schedule: Characteristic[Schedule] | None = None
     consumption_data: Characteristic[dict[str, Any]] | None = None
-    holiday_mode: Characteristic[dict[str, Any]] | None = None
+    holiday_mode: Characteristic[HolidayMode] | None = None
 
     class Config(OnectaModel.Config):
         """Mashumaro configuration."""
