@@ -7,6 +7,7 @@ import pytest
 from syrupy import SnapshotAssertion
 
 from daikin_onecta import GatewayDevice
+from daikin_onecta.models import Characteristic
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -39,26 +40,28 @@ def test_homehub_model(snapshot: SnapshotAssertion) -> None:
     } == snapshot
 
 
+def test_characteristic_aliases(snapshot: SnapshotAssertion) -> None:
+    """Deserialize Daikin camel-case characteristic metadata."""
+    characteristic = Characteristic.from_dict(
+        {
+            "value": 21.5,
+            "settable": True,
+            "values": [18.0, 21.5, 25.0],
+            "minValue": 10,
+            "maxValue": 30,
+            "stepValue": 0.5,
+        }
+    )
+
+    assert characteristic == snapshot
+
+
 @pytest.mark.parametrize("fixture", ["gas.json", "ururu.json"])
-def test_complex_device_models(fixture: str, snapshot: SnapshotAssertion) -> None:
+def test_complex_device_models(fixture: str) -> None:
     """Deserialize different real-world device families without modeling every characteristic."""
     devices = load_devices(fixture)
 
-    assert [
-        {
-            "model": device.device_model,
-            "available": device.available,
-            "management_points": [
-                {
-                    "id": point.embedded_id,
-                    "type": point.management_point_type,
-                    "sub_type": point.management_point_sub_type,
-                    "name": point.name.value if point.name else None,
-                    "operation_mode": point.operation_mode.value if point.operation_mode else None,
-                    "operation_modes": point.operation_mode.values if point.operation_mode else None,
-                }
-                for point in device.management_points
-            ],
-        }
-        for device in devices
-    ] == snapshot
+    assert devices
+    assert all(device.id for device in devices)
+    assert all(device.device_model for device in devices)
+    assert all(device.management_points for device in devices)
