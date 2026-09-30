@@ -169,6 +169,18 @@ def test_consumption_data_model(snapshot: SnapshotAssertion) -> None:
     } == snapshot
 
 
+def test_unmodeled_simple_characteristics(snapshot: SnapshotAssertion) -> None:
+    """Keep simple characteristics used for dynamic HA entity discovery."""
+    device = load_devices("dx4_firmwareavailable.json")[0]
+    gateway = next(point for point in device.management_points if point.management_point_type == "gateway")
+
+    assert {
+        name: characteristic.to_dict()
+        for name, characteristic in gateway.simple_characteristics().items()
+        if name in {"isFirmwareUpdateSupported", "ipAddress", "macAddress", "timeZone"}
+    } == snapshot
+
+
 @pytest.mark.parametrize("fixture", DEVICE_FIXTURES)
 def test_all_existing_device_fixtures(fixture: str, snapshot: SnapshotAssertion) -> None:
     """Deserialize every existing real-world fixture into the common typed model."""
