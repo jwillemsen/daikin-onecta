@@ -1,6 +1,7 @@
 """Tests for the Daikin Onecta client."""
 
 import aiohttp
+from yarl import URL
 from aioresponses import aioresponses
 import pytest
 
@@ -78,3 +79,24 @@ async def test_unexpected_api_error() -> None:
                 await client.get_gateway_devices()
 
             assert exc_info.value.status == 500
+
+
+@pytest.mark.asyncio
+async def test_set_schedule() -> None:
+    """Select an existing schedule through the schedule characteristic."""
+    async with aiohttp.ClientSession() as session:
+        with aioresponses() as mocked:
+            url = (
+                f"{BASE_URL}/v1/gateway-devices/gateway-1/management-points/climateControl"
+                "/characteristics/schedule"
+            )
+            mocked.patch(url, status=204)
+            client = OnectaClient(session, token_provider)
+
+            await client.set_schedule("gateway-1", "climateControl", "heating", "scheduleHeatingRT2")
+
+            request = mocked.requests[("PATCH", URL(url))][0]
+            assert request.kwargs["json"] == {
+                "value": "scheduleHeatingRT2",
+                "path": "/modes/heating/currentSchedule",
+            }
