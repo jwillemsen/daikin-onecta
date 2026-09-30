@@ -334,12 +334,16 @@ class ManagementPoint(OnectaModel):
     on_off_mode: Characteristic[str] | None = None
     software_version: Characteristic[str] | None = None
     firmware_version: Characteristic[str] | None = None
+    eeprom_version: Characteristic[str] | None = None
     model_info: Characteristic[str] | None = None
     serial_number: Characteristic[str] | None = None
     error_code: Characteristic[str] | None = None
     is_in_error_state: Characteristic[bool] | None = None
     is_in_warning_state: Characteristic[bool] | None = None
     is_in_caution_state: Characteristic[bool] | None = None
+    is_firmware_update_supported: Characteristic[bool] | None = None
+    firmware_update: Characteristic[dict[str, Any]] | None = None
+    firmware_update_status: Characteristic[str] | None = None
     temperature_control: Characteristic[TemperatureControl] | None = None
     sensory_data: Characteristic[SensoryData] | None = None
     fan_control: Characteristic[FanControl] | None = None
@@ -362,12 +366,16 @@ class ManagementPoint(OnectaModel):
             "onOffMode",
             "softwareVersion",
             "firmwareVersion",
+            "eepromVersion",
             "modelInfo",
             "serialNumber",
             "errorCode",
             "isInErrorState",
             "isInWarningState",
             "isInCautionState",
+            "isFirmwareUpdateSupported",
+            "firmwareUpdate",
+            "firmwareUpdateStatus",
             "temperatureControl",
             "sensoryData",
             "fanControl",
@@ -397,12 +405,16 @@ class ManagementPoint(OnectaModel):
             "on_off_mode": "onOffMode",
             "software_version": "softwareVersion",
             "firmware_version": "firmwareVersion",
+            "eeprom_version": "eepromVersion",
             "model_info": "modelInfo",
             "serial_number": "serialNumber",
             "error_code": "errorCode",
             "is_in_error_state": "isInErrorState",
             "is_in_warning_state": "isInWarningState",
             "is_in_caution_state": "isInCautionState",
+            "is_firmware_update_supported": "isFirmwareUpdateSupported",
+            "firmware_update": "firmwareUpdate",
+            "firmware_update_status": "firmwareUpdateStatus",
             "temperature_control": "temperatureControl",
             "sensory_data": "sensoryData",
             "fan_control": "fanControl",
@@ -418,12 +430,15 @@ class ManagementPoint(OnectaModel):
             "onOffMode": self.on_off_mode,
             "softwareVersion": self.software_version,
             "firmwareVersion": self.firmware_version,
+            "eepromVersion": self.eeprom_version,
             "modelInfo": self.model_info,
             "serialNumber": self.serial_number,
             "errorCode": self.error_code,
             "isInErrorState": self.is_in_error_state,
             "isInWarningState": self.is_in_warning_state,
             "isInCautionState": self.is_in_caution_state,
+            "isFirmwareUpdateSupported": self.is_firmware_update_supported,
+            "firmwareUpdateStatus": self.firmware_update_status,
         }
         return modeled.get(name) or self.characteristics.get(name)
 
@@ -436,12 +451,15 @@ class ManagementPoint(OnectaModel):
             "onOffMode",
             "softwareVersion",
             "firmwareVersion",
+            "eepromVersion",
             "modelInfo",
             "serialNumber",
             "errorCode",
             "isInErrorState",
             "isInWarningState",
             "isInCautionState",
+            "isFirmwareUpdateSupported",
+            "firmwareUpdateStatus",
         ):
             characteristic = self.characteristic(name)
             if characteristic is not None:
