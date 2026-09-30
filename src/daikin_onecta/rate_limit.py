@@ -1,7 +1,7 @@
 """Daikin Onecta API rate-limit information."""
 
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Mapping
 
 
 def _header_int(headers: Mapping[str, str], name: str) -> int | None:
