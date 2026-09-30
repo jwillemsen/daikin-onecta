@@ -98,13 +98,15 @@ class OnectaClient:
         management_point_id: str,
         mode: str,
         schedule: str,
+        *,
+        enabled: bool = True,
     ) -> None:
-        """Select a configured schedule for a management-point mode."""
+        """Select or disable a configured schedule for a management-point mode."""
         await self.put_management_point(
             gateway_id,
             management_point_id,
             f"schedule/{mode}/current",
-            {"scheduleId": schedule, "enabled": True},
+            {"scheduleId": schedule, "enabled": enabled},
         )
 
     async def patch_characteristic(
