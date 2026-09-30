@@ -1,7 +1,6 @@
 """Models returned by the Daikin Onecta API."""
 
 from dataclasses import dataclass
-from typing import Any
 from typing import Generic
 from typing import TypeVar
 
