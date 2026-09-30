@@ -154,6 +154,10 @@ class SensoryData(OnectaModel):
     outdoor_temperature: Characteristic[int | float] | None = None
     leaving_water_temperature: Characteristic[int | float] | None = None
     tank_temperature: Characteristic[int | float] | None = None
+    room_humidity: Characteristic[int | float] | None = None
+    pm1_concentration: Characteristic[int | float] | None = None
+    pm25_concentration: Characteristic[int | float] | None = None
+    pm10_concentration: Characteristic[int | float] | None = None
 
     class Config(OnectaModel.Config):
         """Mashumaro configuration."""
@@ -163,7 +167,89 @@ class SensoryData(OnectaModel):
             "outdoor_temperature": "outdoorTemperature",
             "leaving_water_temperature": "leavingWaterTemperature",
             "tank_temperature": "tankTemperature",
+            "room_humidity": "roomHumidity",
+            "pm1_concentration": "pm1Concentration",
+            "pm25_concentration": "pm25Concentration",
+            "pm10_concentration": "pm10Concentration",
         }
+
+
+@dataclass(slots=True)
+class FanSpeedMode(OnectaModel):
+    """Numeric fan-speed mode."""
+
+    value: int | float
+    settable: bool = False
+    min_value: int | float | None = None
+    max_value: int | float | None = None
+    step_value: int | float | None = None
+
+    class Config(OnectaModel.Config):
+        """Mashumaro configuration."""
+
+        aliases = {
+            "min_value": "minValue",
+            "max_value": "maxValue",
+            "step_value": "stepValue",
+        }
+
+
+@dataclass(slots=True)
+class FanSpeed(OnectaModel):
+    """Fan-speed selection for an operation mode."""
+
+    current_mode: Characteristic[str]
+    modes: dict[str, FanSpeedMode] | None = None
+
+    class Config(OnectaModel.Config):
+        """Mashumaro configuration."""
+
+        aliases = {"current_mode": "currentMode"}
+
+
+@dataclass(slots=True)
+class FanDirectionAxis(OnectaModel):
+    """Fan-direction selection for one axis."""
+
+    current_mode: Characteristic[str]
+
+    class Config(OnectaModel.Config):
+        """Mashumaro configuration."""
+
+        aliases = {"current_mode": "currentMode"}
+
+
+@dataclass(slots=True)
+class FanDirection(OnectaModel):
+    """Horizontal and vertical fan-direction controls."""
+
+    horizontal: FanDirectionAxis | None = None
+    vertical: FanDirectionAxis | None = None
+
+
+@dataclass(slots=True)
+class FanOperationMode(OnectaModel):
+    """Fan controls for one HVAC operation mode."""
+
+    fan_speed: FanSpeed | None = None
+    fan_direction: FanDirection | None = None
+
+    class Config(OnectaModel.Config):
+        """Mashumaro configuration."""
+
+        aliases = {"fan_speed": "fanSpeed", "fan_direction": "fanDirection"}
+
+
+@dataclass(slots=True)
+class FanControl(OnectaModel):
+    """Fan controls grouped by HVAC operation mode."""
+
+    operation_modes: dict[str, FanOperationMode]
+
+    class Config(OnectaModel.Config):
+        """Mashumaro configuration."""
+
+        aliases = {"operation_modes": "operationModes"}
 
 
 @dataclass(slots=True)
@@ -190,8 +276,8 @@ class ManagementPoint(OnectaModel):
     is_in_warning_state: Characteristic[bool] | None = None
     is_in_caution_state: Characteristic[bool] | None = None
     temperature_control: Characteristic[TemperatureControl] | None = None
-    sensory_data: Characteristic[dict[str, Any]] | None = None
-    fan_control: Characteristic[dict[str, Any]] | None = None
+    sensory_data: Characteristic[SensoryData] | None = None
+    fan_control: Characteristic[FanControl] | None = None
     schedule: Characteristic[Schedule] | None = None
     consumption_data: Characteristic[dict[str, Any]] | None = None
     holiday_mode: Characteristic[HolidayMode] | None = None
