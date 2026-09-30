@@ -1,6 +1,7 @@
 """Models returned by the Daikin Onecta API."""
 
 from dataclasses import dataclass
+from typing import Any
 from typing import Generic
 from typing import TypeVar
 
@@ -87,13 +88,29 @@ class TemperatureControl(OnectaModel):
 
 
 @dataclass(slots=True)
+class ScheduleOption(OnectaModel):
+    """A configured schedule that can be selected."""
+
+    id: str
+    name: str
+
+
+@dataclass(slots=True)
 class ScheduleSelection(OnectaModel):
-    """A selectable schedule for one Daikin schedule mode."""
+    """Schedule selection state for one Daikin schedule mode."""
 
     mode: str
     selected: str
-    available: list[str]
-    settable: bool
+    options: list[ScheduleOption]
+    enabled: bool
+    enabled_settable: bool
+
+    @property
+    def current_option(self) -> str | None:
+        """Return the readable name of the selected schedule."""
+        if not self.enabled:
+            return None
+        return next((option.name for option in self.options if option.id == self.selected), self.selected)
 
 
 @dataclass(slots=True)
@@ -118,14 +135,25 @@ class Schedule(OnectaModel):
                 continue
             selected = current.get("value")
             available = current.get("values")
+            enabled = mode_data.get("enabled", {})
+            schedules = mode_data.get("schedules", {})
             if not isinstance(selected, str) or not isinstance(available, list):
                 continue
+            options: list[ScheduleOption] = []
+            for schedule_id in available:
+                if not isinstance(schedule_id, str):
+                    continue
+                schedule_data = schedules.get(schedule_id, {})
+                name_data = schedule_data.get("name", {})
+                name = name_data.get("value") if isinstance(name_data, dict) else None
+                options.append(ScheduleOption(id=schedule_id, name=name or schedule_id))
             result.append(
                 ScheduleSelection(
                     mode=mode,
                     selected=selected,
-                    available=[value for value in available if isinstance(value, str)],
-                    settable=bool(current.get("settable", False)),
+                    options=options,
+                    enabled=bool(enabled.get("value", False)),
+                    enabled_settable=bool(enabled.get("settable", False)),
                 )
             )
         return result
