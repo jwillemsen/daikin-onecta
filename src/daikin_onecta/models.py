@@ -252,6 +252,43 @@ class FanControl(OnectaModel):
 
 
 @dataclass(slots=True)
+class ConsumptionSeries(OnectaModel):
+    """Consumption values for the API day, week, and month buckets."""
+
+    day: list[int | float | None] | None = None
+    week: list[int | float | None] | None = None
+    month: list[int | float | None] | None = None
+
+    class Config(OnectaModel.Config):
+        """Mashumaro configuration."""
+
+        aliases = {"day": "d", "week": "w", "month": "m"}
+
+
+@dataclass(slots=True)
+class ConsumptionByPurpose(OnectaModel):
+    """Consumption series split by heating and cooling."""
+
+    heating: ConsumptionSeries | None = None
+    cooling: ConsumptionSeries | None = None
+
+
+@dataclass(slots=True)
+class ConsumptionSource(ConsumptionByPurpose):
+    """Consumption for one energy source."""
+
+    unit: str | None = None
+
+
+@dataclass(slots=True)
+class ConsumptionData(OnectaModel):
+    """Consumption grouped by energy source."""
+
+    electrical: ConsumptionSource | None = None
+    gas: ConsumptionSource | None = None
+
+
+@dataclass(slots=True)
 class ManagementPoint(OnectaModel):
     """A Daikin management point.
 
@@ -278,7 +315,7 @@ class ManagementPoint(OnectaModel):
     sensory_data: Characteristic[SensoryData] | None = None
     fan_control: Characteristic[FanControl] | None = None
     schedule: Characteristic[Schedule] | None = None
-    consumption_data: Characteristic[dict[str, Any]] | None = None
+    consumption_data: Characteristic[ConsumptionData] | None = None
     holiday_mode: Characteristic[HolidayMode] | None = None
 
     class Config(OnectaModel.Config):
