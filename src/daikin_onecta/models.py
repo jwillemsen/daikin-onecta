@@ -2,28 +2,44 @@
 
 from dataclasses import dataclass
 from typing import Any
+from typing import Generic
+from typing import TypeVar
 
 from mashumaro import DataClassDictMixin
 from mashumaro.config import BaseConfig
 
+T = TypeVar("T")
 
-@dataclass(slots=True)
-class Characteristic(DataClassDictMixin):
-    """A Daikin management-point characteristic."""
 
-    value: Any
-    settable: bool = False
-    values: list[Any] | None = None
-    ref: str | None = None
-    min_value: int | float | None = None
-    max_value: int | float | None = None
-    step_value: int | float | None = None
-    max_length: int | None = None
+class OnectaModel(DataClassDictMixin):
+    """Base model using Daikin API field aliases."""
 
     class Config(BaseConfig):
         """Mashumaro configuration."""
 
+        omit_none = True
+
+
+@dataclass(slots=True)
+class Characteristic(OnectaModel, Generic[T]):
+    """Common envelope used by Daikin management-point characteristics."""
+
+    value: T
+    settable: bool = False
+    values: list[T] | None = None
+    ref: str | None = None
+    requires_reboot: bool | None = None
+    min_value: int | float | None = None
+    max_value: int | float | None = None
+    step_value: int | float | None = None
+    max_length: int | None = None
+    unit: str | None = None
+
+    class Config(OnectaModel.Config):
+        """Mashumaro configuration."""
+
         aliases = {
+            "requires_reboot": "requiresReboot",
             "min_value": "minValue",
             "max_value": "maxValue",
             "step_value": "stepValue",
@@ -32,22 +48,96 @@ class Characteristic(DataClassDictMixin):
 
 
 @dataclass(slots=True)
-class ManagementPoint(DataClassDictMixin):
-    """Stable management-point metadata and commonly used characteristics."""
+class Setpoint(OnectaModel):
+    """Temperature or offset setpoint."""
+
+    value: int | float
+    settable: bool = False
+    min_value: int | float | None = None
+    max_value: int | float | None = None
+    step_value: int | float | None = None
+    unit: str | None = None
+
+    class Config(OnectaModel.Config):
+        """Mashumaro configuration."""
+
+        aliases = {
+            "min_value": "minValue",
+            "max_value": "maxValue",
+            "step_value": "stepValue",
+        }
+
+
+@dataclass(slots=True)
+class OperationModeSetpoints(OnectaModel):
+    """Setpoints available for an operation mode."""
+
+    setpoints: dict[str, Setpoint]
+
+
+@dataclass(slots=True)
+class TemperatureControl(OnectaModel):
+    """Temperature control grouped by operation mode."""
+
+    operation_modes: dict[str, OperationModeSetpoints]
+
+    class Config(OnectaModel.Config):
+        """Mashumaro configuration."""
+
+        aliases = {"operation_modes": "operationModes"}
+
+
+@dataclass(slots=True)
+class SensoryData(OnectaModel):
+    """Named sensor characteristics exposed by a management point."""
+
+    room_temperature: Characteristic[int | float] | None = None
+    outdoor_temperature: Characteristic[int | float] | None = None
+    leaving_water_temperature: Characteristic[int | float] | None = None
+    tank_temperature: Characteristic[int | float] | None = None
+
+    class Config(OnectaModel.Config):
+        """Mashumaro configuration."""
+
+        aliases = {
+            "room_temperature": "roomTemperature",
+            "outdoor_temperature": "outdoorTemperature",
+            "leaving_water_temperature": "leavingWaterTemperature",
+            "tank_temperature": "tankTemperature",
+        }
+
+
+@dataclass(slots=True)
+class ManagementPoint(OnectaModel):
+    """A Daikin management point.
+
+    Simple characteristics use the common typed envelope. Complex trees are
+    modeled separately when their structure is stable across device families.
+    """
 
     embedded_id: str
     management_point_type: str
     management_point_category: str | None = None
     management_point_sub_type: str | None = None
-    name: Characteristic | None = None
-    operation_mode: Characteristic | None = None
-    on_off_mode: Characteristic | None = None
-    software_version: Characteristic | None = None
-    firmware_version: Characteristic | None = None
-    model_info: Characteristic | None = None
-    serial_number: Characteristic | None = None
+    name: Characteristic[str] | None = None
+    operation_mode: Characteristic[str] | None = None
+    on_off_mode: Characteristic[str] | None = None
+    software_version: Characteristic[str] | None = None
+    firmware_version: Characteristic[str] | None = None
+    model_info: Characteristic[str] | None = None
+    serial_number: Characteristic[str] | None = None
+    error_code: Characteristic[str] | None = None
+    is_in_error_state: Characteristic[bool] | None = None
+    is_in_warning_state: Characteristic[bool] | None = None
+    is_in_caution_state: Characteristic[bool] | None = None
+    temperature_control: Characteristic[TemperatureControl] | None = None
+    sensory_data: Characteristic[dict[str, Any]] | None = None
+    fan_control: Characteristic[dict[str, Any]] | None = None
+    schedule: Characteristic[dict[str, Any]] | None = None
+    consumption_data: Characteristic[dict[str, Any]] | None = None
+    holiday_mode: Characteristic[dict[str, Any]] | None = None
 
-    class Config(BaseConfig):
+    class Config(OnectaModel.Config):
         """Mashumaro configuration."""
 
         aliases = {
@@ -61,22 +151,32 @@ class ManagementPoint(DataClassDictMixin):
             "firmware_version": "firmwareVersion",
             "model_info": "modelInfo",
             "serial_number": "serialNumber",
+            "error_code": "errorCode",
+            "is_in_error_state": "isInErrorState",
+            "is_in_warning_state": "isInWarningState",
+            "is_in_caution_state": "isInCautionState",
+            "temperature_control": "temperatureControl",
+            "sensory_data": "sensoryData",
+            "fan_control": "fanControl",
+            "consumption_data": "consumptionData",
+            "holiday_mode": "holidayMode",
         }
 
 
 @dataclass(slots=True)
-class GatewayDevice(DataClassDictMixin):
+class GatewayDevice(OnectaModel):
     """A Daikin Onecta gateway device."""
 
     id: str
     device_model: str
     management_points: list[ManagementPoint]
-    cloud_connection: Characteristic
+    cloud_connection: Characteristic[bool]
     device_type: str | None = None
     embedded_id: str | None = None
     timestamp: str | None = None
+    last_update_received: str | None = None
 
-    class Config(BaseConfig):
+    class Config(OnectaModel.Config):
         """Mashumaro configuration."""
 
         aliases = {
@@ -85,9 +185,10 @@ class GatewayDevice(DataClassDictMixin):
             "cloud_connection": "isCloudConnectionUp",
             "device_type": "type",
             "embedded_id": "embeddedId",
+            "last_update_received": "lastUpdateReceived",
         }
 
     @property
     def available(self) -> bool:
         """Return whether the gateway is connected to the Daikin cloud."""
-        return bool(self.cloud_connection.value)
+        return self.cloud_connection.value
