@@ -371,6 +371,38 @@ class ManagementPoint(OnectaModel):
             "holiday_mode": "holidayMode",
         }
 
+    def characteristic(self, name: str) -> Characteristic[Any] | None:
+        """Return any simple characteristic by its Daikin API name.
+
+        This supports entity discovery for characteristics that don't need a
+        dedicated semantic model while keeping complex values explicitly typed.
+        """
+        data = self.to_dict(by_alias=True)
+        value = data.get(name)
+        if not isinstance(value, dict) or "value" not in value:
+            return None
+        if isinstance(value["value"], dict):
+            return None
+        return Characteristic[Any].from_dict(value)
+
+    def simple_characteristics(self) -> dict[str, Characteristic[Any]]:
+        """Return all scalar/list-valued characteristics on this management point."""
+        metadata = {
+            "embeddedId",
+            "managementPointType",
+            "managementPointCategory",
+            "managementPointSubType",
+        }
+        result: dict[str, Characteristic[Any]] = {}
+        for name, value in self.to_dict(by_alias=True).items():
+            if name in metadata or not isinstance(value, dict) or "value" not in value:
+                continue
+            if isinstance(value["value"], dict):
+                continue
+            result[name] = Characteristic[Any].from_dict(value)
+        return result
+
+
 
 @dataclass(slots=True)
 class GatewayDevice(OnectaModel):
