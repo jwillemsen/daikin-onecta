@@ -83,20 +83,20 @@ async def test_unexpected_api_error() -> None:
 
 @pytest.mark.asyncio
 async def test_set_schedule() -> None:
-    """Select an existing schedule through the schedule characteristic."""
+    """Select an existing schedule through the schedule endpoint."""
     async with aiohttp.ClientSession() as session:
         with aioresponses() as mocked:
             url = (
                 f"{BASE_URL}/v1/gateway-devices/gateway-1/management-points/climateControl"
-                "/characteristics/schedule"
+                "/schedule/heating/current"
             )
-            mocked.patch(url, status=204)
+            mocked.put(url, status=204)
             client = OnectaClient(session, token_provider)
 
             await client.set_schedule("gateway-1", "climateControl", "heating", "scheduleHeatingRT2")
 
-            request = mocked.requests[("PATCH", URL(url))][0]
+            request = mocked.requests[("PUT", URL(url))][0]
             assert request.kwargs["json"] == {
-                "value": "scheduleHeatingRT2",
-                "path": "/modes/heating/currentSchedule",
+                "scheduleId": "scheduleHeatingRT2",
+                "enabled": True,
             }
