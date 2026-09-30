@@ -112,6 +112,44 @@ def test_holiday_mode(snapshot: SnapshotAssertion) -> None:
     assert holiday.value.to_dict() == snapshot
 
 
+def test_sensory_data_model(snapshot: SnapshotAssertion) -> None:
+    """Deserialize all known sensory data types."""
+    device = load_devices("mc80z.json")[0]
+    point = next(point for point in device.management_points if point.sensory_data is not None)
+    sensory = point.sensory_data
+    assert sensory is not None
+
+    assert sensory.value.to_dict() == snapshot
+
+
+def test_fan_control_model(snapshot: SnapshotAssertion) -> None:
+    """Deserialize fan speed and direction controls by operation mode."""
+    device = load_devices("climate_floorheatingairflow.json")[0]
+    point = next(point for point in device.management_points if point.fan_control is not None)
+    fan_control = point.fan_control
+    assert fan_control is not None
+
+    heating = fan_control.value.operation_modes["heating"]
+    assert heating.fan_speed is not None
+    assert heating.fan_direction is not None
+
+    assert {
+        "speed_mode": heating.fan_speed.current_mode.value,
+        "speed_modes": heating.fan_speed.current_mode.values,
+        "fixed_speed": heating.fan_speed.modes["fixed"].value if heating.fan_speed.modes else None,
+        "horizontal": (
+            heating.fan_direction.horizontal.current_mode.to_dict()
+            if heating.fan_direction.horizontal
+            else None
+        ),
+        "vertical": (
+            heating.fan_direction.vertical.current_mode.to_dict()
+            if heating.fan_direction.vertical
+            else None
+        ),
+    } == snapshot
+
+
 @pytest.mark.parametrize("fixture", DEVICE_FIXTURES)
 def test_all_existing_device_fixtures(fixture: str, snapshot: SnapshotAssertion) -> None:
     """Deserialize every existing real-world fixture into the common typed model."""
