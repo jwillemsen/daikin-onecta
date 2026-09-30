@@ -20,7 +20,7 @@ async def token_provider() -> str:
 @pytest.mark.asyncio
 async def test_get_gateway_devices() -> None:
     """Return gateway devices from the API."""
-    payload = [{"id": "gateway-1", "deviceModel": "test"}]
+    payload = [\n        {\n            "id": "gateway-1",\n            "deviceModel": "test",\n            "isCloudConnectionUp": {"value": True, "settable": False},\n            "managementPoints": [],\n        }\n    ]
 
     async with aiohttp.ClientSession() as session:
         with aioresponses() as mocked:
