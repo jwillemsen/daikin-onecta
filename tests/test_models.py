@@ -53,7 +53,7 @@ def test_characteristic_aliases(snapshot: SnapshotAssertion) -> None:
         }
     )
 
-    assert characteristic == snapshot
+    assert characteristic.to_dict() == snapshot
 
 
 @pytest.mark.parametrize("fixture", ["gas.json", "ururu.json"])
