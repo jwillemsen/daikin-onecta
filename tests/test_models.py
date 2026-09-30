@@ -150,6 +150,25 @@ def test_fan_control_model(snapshot: SnapshotAssertion) -> None:
     } == snapshot
 
 
+def test_consumption_data_model(snapshot: SnapshotAssertion) -> None:
+    """Deserialize electrical and gas consumption into normalized series."""
+    device = load_devices("gas.json")[0]
+    point = next(point for point in device.management_points if point.consumption_data is not None)
+    consumption = point.consumption_data
+    assert consumption is not None
+    assert consumption.value.electrical is not None
+    assert consumption.value.gas is not None
+    assert consumption.value.electrical.heating is not None
+    assert consumption.value.gas.heating is not None
+
+    assert {
+        "electrical_unit": consumption.value.electrical.unit,
+        "gas_unit": consumption.value.gas.unit,
+        "electrical_heating": consumption.value.electrical.heating.to_dict(),
+        "gas_heating": consumption.value.gas.heating.to_dict(),
+    } == snapshot
+
+
 @pytest.mark.parametrize("fixture", DEVICE_FIXTURES)
 def test_all_existing_device_fixtures(fixture: str, snapshot: SnapshotAssertion) -> None:
     """Deserialize every existing real-world fixture into the common typed model."""
