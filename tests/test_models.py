@@ -95,7 +95,7 @@ def test_schedule_selections(snapshot: SnapshotAssertion) -> None:
     schedule = climate.schedule
     assert schedule is not None
 
-    assert [selection.to_dict() for selection in schedule.value.selections] == snapshot(extension_class=SingleFileAmberSnapshotExtension)
+    assert [selection.to_dict() for selection in schedule.value.selections] == snapshot(\n        extension_class=SingleFileAmberSnapshotExtension\n    )
 
 
 def test_holiday_mode(snapshot: SnapshotAssertion) -> None:
