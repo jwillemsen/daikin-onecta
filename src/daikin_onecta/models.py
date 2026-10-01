@@ -495,6 +495,18 @@ class GatewayDevice(OnectaModel):
             "last_update_received": "lastUpdateReceived",
         }
 
+    def management_point(self, embedded_id: str) -> ManagementPoint | None:
+        """Return a management point by its embedded ID."""
+        return next((point for point in self.management_points if point.embedded_id == embedded_id), None)
+
+    def management_points_by_type(self, management_point_type: str) -> list[ManagementPoint]:
+        """Return all management points of a type."""
+        return [point for point in self.management_points if point.management_point_type == management_point_type]
+
+    def management_point_by_type(self, management_point_type: str) -> ManagementPoint | None:
+        """Return the first management point of a type."""
+        return next(iter(self.management_points_by_type(management_point_type)), None)
+
     @property
     def available(self) -> bool:
         """Return whether the gateway is connected to the Daikin cloud."""
