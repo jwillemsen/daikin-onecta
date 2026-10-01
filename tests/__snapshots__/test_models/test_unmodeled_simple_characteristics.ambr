@@ -1,0 +1,21 @@
+# serializer version: 1
+# name: test_unmodeled_simple_characteristics
+  dict({
+    'ipAddress': dict({
+      'settable': False,
+      'value': '192.168.1.193',
+    }),
+    'isFirmwareUpdateSupported': dict({
+      'settable': False,
+      'value': True,
+    }),
+    'macAddress': dict({
+      'settable': False,
+      'value': 'e8:4f:25:d3:f5:fe',
+    }),
+    'timeZone': dict({
+      'settable': False,
+      'value': 'Europe/Amsterdam',
+    }),
+  })
+# ---

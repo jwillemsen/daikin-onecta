@@ -1,0 +1,41 @@
+# serializer version: 1
+# name: test_all_existing_device_fixtures[schedule.json]
+  list([
+    dict({
+      'available': True,
+      'management_points': list([
+        dict({
+          'id': 'gateway',
+          'name': 'Gateway',
+          'operation_mode': None,
+          'operation_modes': None,
+          'sub_type': None,
+          'type': 'gateway',
+        }),
+        dict({
+          'id': 'climateControl',
+          'name': 'Master',
+          'operation_mode': 'auto',
+          'operation_modes': list([
+            'auto',
+            'dry',
+            'cooling',
+            'heating',
+            'fanOnly',
+          ]),
+          'sub_type': 'mainZone',
+          'type': 'climateControl',
+        }),
+        dict({
+          'id': 'indoorUnit',
+          'name': 'Indoor Unit',
+          'operation_mode': None,
+          'operation_modes': None,
+          'sub_type': None,
+          'type': 'indoorUnit',
+        }),
+      ]),
+      'model': 'dx23',
+    }),
+  ])
+# ---

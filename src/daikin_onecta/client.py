@@ -5,6 +5,7 @@ from collections.abc import Awaitable, Callable
 from typing import Any
 
 import aiohttp
+from mashumaro.exceptions import MissingField
 
 from .exceptions import (
     OnectaApiError,
@@ -77,7 +78,7 @@ class OnectaClient:
                     return json.loads(response_text)
                 except json.JSONDecodeError as err:
                     raise OnectaApiError(response.status, "Invalid JSON response") from err
-        except (OnectaApiError, OnectaAuthenticationError, OnectaRateLimitError):
+        except OnectaApiError, OnectaAuthenticationError, OnectaRateLimitError:
             raise
         except (TimeoutError, aiohttp.ClientError) as err:
             raise OnectaConnectionError(str(err)) from err
@@ -87,7 +88,27 @@ class OnectaClient:
         data = await self._request("GET", "/v1/gateway-devices")
         if not isinstance(data, list):
             raise OnectaApiError(200, "Expected a list of gateway devices")
-        return data
+        try:
+            return [GatewayDevice.from_dict(device) for device in data]
+        except (MissingField, TypeError, ValueError) as err:
+            raise OnectaApiError(200, "Invalid gateway device data") from err
+
+    async def set_schedule(
+        self,
+        gateway_id: str,
+        management_point_id: str,
+        mode: str,
+        schedule: str,
+        *,
+        enabled: bool = True,
+    ) -> None:
+        """Select or disable a configured schedule for a management-point mode."""
+        await self.put_management_point(
+            gateway_id,
+            management_point_id,
+            f"schedule/{mode}/current",
+            {"scheduleId": schedule, "enabled": enabled},
+        )
 
     async def patch_characteristic(
         self,

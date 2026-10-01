@@ -1,0 +1,15 @@
+# serializer version: 1
+# name: test_characteristic_aliases
+  dict({
+    'max_value': 30,
+    'min_value': 10,
+    'settable': True,
+    'step_value': 0.5,
+    'value': 21.5,
+    'values': list([
+      18.0,
+      21.5,
+      25.0,
+    ]),
+  })
+# ---

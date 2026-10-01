@@ -1,0 +1,65 @@
+# serializer version: 1
+# name: test_all_existing_device_fixtures[altherma_boost.json]
+  list([
+    dict({
+      'available': True,
+      'management_points': list([
+        dict({
+          'id': 'gateway',
+          'name': 'Gateway',
+          'operation_mode': None,
+          'operation_modes': None,
+          'sub_type': None,
+          'type': 'gateway',
+        }),
+        dict({
+          'id': 'climateControlMainZone',
+          'name': 'Altherma',
+          'operation_mode': 'heating',
+          'operation_modes': list([
+            'heating',
+            'cooling',
+            'auto',
+          ]),
+          'sub_type': 'mainZone',
+          'type': 'climateControl',
+        }),
+        dict({
+          'id': 'domesticHotWaterTank',
+          'name': '',
+          'operation_mode': 'heating',
+          'operation_modes': list([
+            'heating',
+          ]),
+          'sub_type': None,
+          'type': 'domesticHotWaterTank',
+        }),
+        dict({
+          'id': 'indoorUnitHydro',
+          'name': 'Indoor Hydro Unit',
+          'operation_mode': None,
+          'operation_modes': None,
+          'sub_type': None,
+          'type': 'indoorUnitHydro',
+        }),
+        dict({
+          'id': 'outdoorUnit',
+          'name': 'Outdoor Unit',
+          'operation_mode': None,
+          'operation_modes': None,
+          'sub_type': None,
+          'type': 'outdoorUnit',
+        }),
+        dict({
+          'id': 'userInterface',
+          'name': 'User Interface',
+          'operation_mode': None,
+          'operation_modes': None,
+          'sub_type': None,
+          'type': 'userInterface',
+        }),
+      ]),
+      'model': 'Altherma',
+    }),
+  ])
+# ---

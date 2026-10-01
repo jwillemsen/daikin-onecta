@@ -1,0 +1,45 @@
+# serializer version: 1
+# name: test_sensory_data_model
+  dict({
+    'pm10_concentration': dict({
+      'max_value': 999,
+      'min_value': 0,
+      'settable': False,
+      'step_value': 1,
+      'unit': 'µg/m³',
+      'value': 2,
+    }),
+    'pm1_concentration': dict({
+      'max_value': 999,
+      'min_value': 0,
+      'settable': False,
+      'step_value': 1,
+      'unit': 'µg/m³',
+      'value': 1,
+    }),
+    'pm25_concentration': dict({
+      'max_value': 999,
+      'min_value': 0,
+      'settable': False,
+      'step_value': 1,
+      'unit': 'µg/m³',
+      'value': 2,
+    }),
+    'room_humidity': dict({
+      'max_value': 90,
+      'min_value': 20,
+      'settable': False,
+      'step_value': 1,
+      'unit': '%',
+      'value': 56,
+    }),
+    'room_temperature': dict({
+      'max_value': 90,
+      'min_value': -9,
+      'settable': False,
+      'step_value': 0.5,
+      'unit': '°C',
+      'value': 21,
+    }),
+  })
+# ---

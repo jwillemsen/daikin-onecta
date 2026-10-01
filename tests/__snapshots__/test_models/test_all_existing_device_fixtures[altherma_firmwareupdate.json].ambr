@@ -1,0 +1,65 @@
+# serializer version: 1
+# name: test_all_existing_device_fixtures[altherma_firmwareupdate.json]
+  list([
+    dict({
+      'available': True,
+      'management_points': list([
+        dict({
+          'id': 'gateway',
+          'name': None,
+          'operation_mode': None,
+          'operation_modes': None,
+          'sub_type': None,
+          'type': 'gateway',
+        }),
+        dict({
+          'id': 'climateControlMainZone',
+          'name': 'Climate control getr422',
+          'operation_mode': 'heating',
+          'operation_modes': list([
+            'heating',
+            'cooling',
+            'auto',
+          ]),
+          'sub_type': 'mainZone',
+          'type': 'climateControl',
+        }),
+        dict({
+          'id': 'domesticHotWaterTank',
+          'name': 'Hot water tank etrg422',
+          'operation_mode': 'heating',
+          'operation_modes': list([
+            'heating',
+          ]),
+          'sub_type': None,
+          'type': 'domesticHotWaterTank',
+        }),
+        dict({
+          'id': 'indoorUnitHydro',
+          'name': None,
+          'operation_mode': None,
+          'operation_modes': None,
+          'sub_type': None,
+          'type': 'indoorUnitHydro',
+        }),
+        dict({
+          'id': 'outdoorUnit',
+          'name': None,
+          'operation_mode': None,
+          'operation_modes': None,
+          'sub_type': None,
+          'type': 'outdoorUnit',
+        }),
+        dict({
+          'id': 'userInterface',
+          'name': None,
+          'operation_mode': None,
+          'operation_modes': None,
+          'sub_type': None,
+          'type': 'userInterface',
+        }),
+      ]),
+      'model': 'altherma4',
+    }),
+  ])
+# ---

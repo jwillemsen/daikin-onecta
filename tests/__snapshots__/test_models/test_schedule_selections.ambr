@@ -1,0 +1,37 @@
+# serializer version: 1
+# name: test_schedule_selections
+  list([
+    dict({
+      'enabled': False,
+      'enabled_settable': True,
+      'mode': 'heating',
+      'options': list([
+        dict({
+          'id': 'scheduleHeatingRT1',
+          'name': 'User defined 1',
+        }),
+        dict({
+          'id': 'scheduleHeatingRT2',
+          'name': 'User defined 2',
+        }),
+        dict({
+          'id': 'scheduleHeatingRT3',
+          'name': 'User defined 3',
+        }),
+      ]),
+      'selected': 'scheduleHeatingRT1',
+    }),
+    dict({
+      'enabled': False,
+      'enabled_settable': True,
+      'mode': 'cooling',
+      'options': list([
+        dict({
+          'id': 'scheduleCoolingRT1',
+          'name': 'User defined',
+        }),
+      ]),
+      'selected': 'scheduleCoolingRT1',
+    }),
+  ])
+# ---

@@ -1,0 +1,64 @@
+# serializer version: 1
+# name: test_all_existing_device_fixtures[holidaymode.json]
+  list([
+    dict({
+      'available': True,
+      'management_points': list([
+        dict({
+          'id': '0',
+          'name': 'Gateway',
+          'operation_mode': None,
+          'operation_modes': None,
+          'sub_type': None,
+          'type': 'gateway',
+        }),
+        dict({
+          'id': '1',
+          'name': '',
+          'operation_mode': 'heatingDay',
+          'operation_modes': list([
+            'heatingDay',
+            'heatingNight',
+          ]),
+          'sub_type': 'mainZone',
+          'type': 'climateControl',
+        }),
+        dict({
+          'id': '2',
+          'name': '',
+          'operation_mode': 'heating',
+          'operation_modes': list([
+            'heating',
+          ]),
+          'sub_type': None,
+          'type': 'domesticHotWaterFlowThrough',
+        }),
+        dict({
+          'id': '3',
+          'name': 'Indoor Unit Hydro',
+          'operation_mode': None,
+          'operation_modes': None,
+          'sub_type': None,
+          'type': 'indoorUnitHydro',
+        }),
+        dict({
+          'id': '4',
+          'name': 'Outdoor Unit',
+          'operation_mode': None,
+          'operation_modes': None,
+          'sub_type': None,
+          'type': 'outdoorUnit',
+        }),
+        dict({
+          'id': '5',
+          'name': 'User Interface',
+          'operation_mode': None,
+          'operation_modes': None,
+          'sub_type': None,
+          'type': 'userInterface',
+        }),
+      ]),
+      'model': 'NDJ',
+    }),
+  ])
+# ---

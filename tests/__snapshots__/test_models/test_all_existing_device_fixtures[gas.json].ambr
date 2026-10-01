@@ -1,0 +1,63 @@
+# serializer version: 1
+# name: test_all_existing_device_fixtures[gas.json]
+  list([
+    dict({
+      'available': True,
+      'management_points': list([
+        dict({
+          'id': '0',
+          'name': 'My Gateway',
+          'operation_mode': None,
+          'operation_modes': None,
+          'sub_type': None,
+          'type': 'gateway',
+        }),
+        dict({
+          'id': '1',
+          'name': 'My Living Room',
+          'operation_mode': 'heating',
+          'operation_modes': list([
+            'heating',
+            'cooling',
+            'auto',
+          ]),
+          'sub_type': 'mainZone',
+          'type': 'climateControl',
+        }),
+        dict({
+          'id': '2',
+          'name': None,
+          'operation_mode': None,
+          'operation_modes': None,
+          'sub_type': None,
+          'type': 'domesticHotWaterTank',
+        }),
+        dict({
+          'id': '3',
+          'name': None,
+          'operation_mode': None,
+          'operation_modes': None,
+          'sub_type': None,
+          'type': 'indoorUnitHydro',
+        }),
+        dict({
+          'id': '4',
+          'name': None,
+          'operation_mode': None,
+          'operation_modes': None,
+          'sub_type': None,
+          'type': 'outdoorUnit',
+        }),
+        dict({
+          'id': '5',
+          'name': None,
+          'operation_mode': None,
+          'operation_modes': None,
+          'sub_type': None,
+          'type': 'userInterface',
+        }),
+      ]),
+      'model': 'dx23',
+    }),
+  ])
+# ---
