@@ -1,0 +1,18 @@
+# serializer version: 1
+# name: test_homehub_model
+  dict({
+    'available': True,
+    'device_model': 'homehub',
+    'device_type': 'homehub',
+    'embedded_id': 'cb4d0c17-4913-4a60-96a7-b7024c88a124',
+    'id': '6a84eb95-60ea-4c21-8376-a10b3886437f',
+    'management_points': list([
+      dict({
+        'category': 'secondary',
+        'embedded_id': 'gateway',
+        'software_version': '2.3.0',
+        'type': 'gateway',
+      }),
+    ]),
+  })
+# ---

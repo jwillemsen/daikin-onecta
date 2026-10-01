@@ -1,0 +1,22 @@
+# serializer version: 1
+# name: test_fan_control_model
+  dict({
+    'fixed_speed': 5,
+    'horizontal': None,
+    'speed_mode': 'auto',
+    'speed_modes': list([
+      'auto',
+      'quiet',
+      'fixed',
+    ]),
+    'vertical': dict({
+      'settable': True,
+      'value': 'stop',
+      'values': list([
+        'stop',
+        'swing',
+        'floorHeatingAirflow',
+      ]),
+    }),
+  })
+# ---
