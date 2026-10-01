@@ -5,6 +5,7 @@ from collections.abc import Awaitable, Callable
 from typing import Any
 
 import aiohttp
+from mashumaro.exceptions import MissingField
 
 from .exceptions import (
     OnectaApiError,
@@ -89,7 +90,7 @@ class OnectaClient:
             raise OnectaApiError(200, "Expected a list of gateway devices")
         try:
             return [GatewayDevice.from_dict(device) for device in data]
-        except (TypeError, ValueError) as err:
+        except (MissingField, TypeError, ValueError) as err:
             raise OnectaApiError(200, "Invalid gateway device data") from err
 
     async def set_schedule(
