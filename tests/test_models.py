@@ -100,7 +100,6 @@ def test_schedule_selections(snapshot: SnapshotAssertion) -> None:
     )
 
 
-
 def test_schedule_selection_current_option() -> None:
     """Return the selected schedule name only when scheduling is enabled."""
     options = [ScheduleOption(id="0", name="Weekday")]
@@ -154,7 +153,6 @@ def test_schedule_selections_ignore_invalid_data() -> None:
     assert selections[0].options == [ScheduleOption(id="0", name="Weekday")]
 
 
-
 def test_holiday_mode(snapshot: SnapshotAssertion) -> None:
     """Deserialize the small holiday-mode value structure."""
     devices = load_devices("gas.json")
@@ -196,15 +194,9 @@ def test_fan_control_model(snapshot: SnapshotAssertion) -> None:
         "speed_modes": heating.fan_speed.current_mode.values,
         "fixed_speed": heating.fan_speed.modes["fixed"].value if heating.fan_speed.modes else None,
         "horizontal": (
-            heating.fan_direction.horizontal.current_mode.to_dict()
-            if heating.fan_direction.horizontal
-            else None
+            heating.fan_direction.horizontal.current_mode.to_dict() if heating.fan_direction.horizontal else None
         ),
-        "vertical": (
-            heating.fan_direction.vertical.current_mode.to_dict()
-            if heating.fan_direction.vertical
-            else None
-        ),
+        "vertical": (heating.fan_direction.vertical.current_mode.to_dict() if heating.fan_direction.vertical else None),
     } == snapshot(extension_class=SingleFileAmberSnapshotExtension)
 
 
