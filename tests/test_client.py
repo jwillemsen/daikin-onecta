@@ -152,14 +152,18 @@ async def test_invalid_gateway_device() -> None:
 
 
 @pytest.mark.asyncio
-async def test_connection_error() -> None:
-    """Translate aiohttp connection failures to a dedicated exception."""
+@pytest.mark.parametrize(
+    "error",
+    [aiohttp.ClientConnectionError("offline"), TimeoutError("timed out")],
+)
+async def test_connection_error(error: Exception) -> None:
+    """Translate connection failures to a dedicated exception."""
     async with aiohttp.ClientSession() as session:
         with aioresponses() as mocked:
-            mocked.get(f"{BASE_URL}/v1/gateway-devices", exception=aiohttp.ClientConnectionError("offline"))
+            mocked.get(f"{BASE_URL}/v1/gateway-devices", exception=error)
             client = OnectaClient(session, token_provider)
 
-            with pytest.raises(OnectaConnectionError, match="offline"):
+            with pytest.raises(OnectaConnectionError, match=str(error)):
                 await client.get_gateway_devices()
 
 
