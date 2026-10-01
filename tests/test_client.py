@@ -101,10 +101,7 @@ async def test_set_schedule() -> None:
     """Select an existing schedule through the schedule endpoint."""
     async with aiohttp.ClientSession() as session:
         with aioresponses() as mocked:
-            url = (
-                f"{BASE_URL}/v1/gateway-devices/gateway-1/management-points/climateControl"
-                "/schedule/heating/current"
-            )
+            url = f"{BASE_URL}/v1/gateway-devices/gateway-1/management-points/climateControl/schedule/heating/current"
             mocked.put(url, status=204)
             client = OnectaClient(session, token_provider)
 
@@ -230,10 +227,7 @@ async def test_disable_schedule() -> None:
     """Disable a configured schedule."""
     async with aiohttp.ClientSession() as session:
         with aioresponses() as mocked:
-            url = (
-                f"{BASE_URL}/v1/gateway-devices/gateway-1/management-points/climateControl"
-                "/schedule/heating/current"
-            )
+            url = f"{BASE_URL}/v1/gateway-devices/gateway-1/management-points/climateControl/schedule/heating/current"
             mocked.put(url, status=204)
             client = OnectaClient(session, token_provider)
 
