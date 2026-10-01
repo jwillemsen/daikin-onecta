@@ -18,6 +18,7 @@ jobs:
   test:
     runs-on: ubuntu-slim
     strategy:
+      fail-fast: false
       matrix:
         python-version:
           - "3.12"
