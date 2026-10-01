@@ -39,7 +39,7 @@ def test_homehub_model(snapshot: SnapshotAssertion) -> None:
             }
             for point in device.management_points
         ],
-    } == snapshot
+    } == snapshot(extension_class=SingleFileAmberSnapshotExtension)
 
 
 def test_characteristic_aliases(snapshot: SnapshotAssertion) -> None:
@@ -55,7 +55,7 @@ def test_characteristic_aliases(snapshot: SnapshotAssertion) -> None:
         }
     )
 
-    assert characteristic.to_dict() == snapshot
+    assert characteristic.to_dict() == snapshot(extension_class=SingleFileAmberSnapshotExtension)
 
 
 def test_temperature_control_model(snapshot: SnapshotAssertion) -> None:
@@ -80,7 +80,7 @@ def test_temperature_control_model(snapshot: SnapshotAssertion) -> None:
         "max_value": room.max_value,
         "step_value": room.step_value,
         "operation_modes": sorted(temperature_control.value.operation_modes),
-    } == snapshot
+    } == snapshot(extension_class=SingleFileAmberSnapshotExtension)
 
 
 def test_schedule_selections(snapshot: SnapshotAssertion) -> None:
@@ -95,7 +95,7 @@ def test_schedule_selections(snapshot: SnapshotAssertion) -> None:
     schedule = climate.schedule
     assert schedule is not None
 
-    assert [selection.to_dict() for selection in schedule.value.selections] == snapshot
+    assert [selection.to_dict() for selection in schedule.value.selections] == snapshot(extension_class=SingleFileAmberSnapshotExtension)
 
 
 def test_holiday_mode(snapshot: SnapshotAssertion) -> None:
@@ -110,7 +110,7 @@ def test_holiday_mode(snapshot: SnapshotAssertion) -> None:
     holiday = climate.holiday_mode
     assert holiday is not None
 
-    assert holiday.value.to_dict() == snapshot
+    assert holiday.value.to_dict() == snapshot(extension_class=SingleFileAmberSnapshotExtension)
 
 
 def test_sensory_data_model(snapshot: SnapshotAssertion) -> None:
@@ -120,7 +120,7 @@ def test_sensory_data_model(snapshot: SnapshotAssertion) -> None:
     sensory = point.sensory_data
     assert sensory is not None
 
-    assert sensory.value.to_dict() == snapshot
+    assert sensory.value.to_dict() == snapshot(extension_class=SingleFileAmberSnapshotExtension)
 
 
 def test_fan_control_model(snapshot: SnapshotAssertion) -> None:
@@ -148,7 +148,7 @@ def test_fan_control_model(snapshot: SnapshotAssertion) -> None:
             if heating.fan_direction.vertical
             else None
         ),
-    } == snapshot
+    } == snapshot(extension_class=SingleFileAmberSnapshotExtension)
 
 
 def test_consumption_data_model(snapshot: SnapshotAssertion) -> None:
@@ -167,7 +167,7 @@ def test_consumption_data_model(snapshot: SnapshotAssertion) -> None:
         "gas_unit": consumption.value.gas.unit,
         "electrical_heating": consumption.value.electrical.heating.to_dict(),
         "gas_heating": consumption.value.gas.heating.to_dict(),
-    } == snapshot
+    } == snapshot(extension_class=SingleFileAmberSnapshotExtension)
 
 
 def test_unmodeled_simple_characteristics(snapshot: SnapshotAssertion) -> None:
@@ -179,7 +179,7 @@ def test_unmodeled_simple_characteristics(snapshot: SnapshotAssertion) -> None:
         name: characteristic.to_dict()
         for name, characteristic in gateway.simple_characteristics().items()
         if name in {"isFirmwareUpdateSupported", "ipAddress", "macAddress", "timeZone"}
-    } == snapshot
+    } == snapshot(extension_class=SingleFileAmberSnapshotExtension)
 
 
 @pytest.mark.parametrize("fixture", DEVICE_FIXTURES)
