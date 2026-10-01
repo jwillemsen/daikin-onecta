@@ -470,7 +470,6 @@ class ManagementPoint(OnectaModel):
         return result
 
 
-
 @dataclass(slots=True)
 class GatewayDevice(OnectaModel):
     """A Daikin Onecta gateway device."""
