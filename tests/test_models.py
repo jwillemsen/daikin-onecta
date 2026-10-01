@@ -254,3 +254,18 @@ def test_all_existing_device_fixtures(fixture: str, snapshot: SnapshotAssertion)
         }
         for device in devices
     ] == snapshot(extension_class=SingleFileAmberSnapshotExtension)
+
+
+def test_management_point_lookup() -> None:
+    """Look up management points by embedded ID and type."""
+    device = load_devices("altherma.json")[0]
+
+    climate_points = device.management_points_by_type("climateControl")
+
+    assert climate_points
+    assert all(point.management_point_type == "climateControl" for point in climate_points)
+    assert device.management_point(climate_points[0].embedded_id) is climate_points[0]
+    assert device.management_point_by_type("climateControl") is climate_points[0]
+    assert device.management_point("missing") is None
+    assert device.management_point_by_type("missing") is None
+    assert device.management_points_by_type("missing") == []
