@@ -1,6 +1,5 @@
 """Client for the Daikin Onecta cloud API."""
 
-import asyncio
 import json
 from collections.abc import Awaitable
 from collections.abc import Callable
@@ -8,10 +7,12 @@ from typing import Any
 
 import aiohttp
 
-from .exceptions import OnectaApiError
-from .exceptions import OnectaAuthenticationError
-from .exceptions import OnectaConnectionError
-from .exceptions import OnectaRateLimitError
+from .exceptions import (
+    OnectaApiError,
+    OnectaAuthenticationError,
+    OnectaConnectionError,
+    OnectaRateLimitError,
+)
 from .models import GatewayDevice
 from .rate_limit import RateLimit
 
@@ -79,7 +80,7 @@ class OnectaClient:
                     raise OnectaApiError(response.status, "Invalid JSON response") from err
         except (OnectaApiError, OnectaAuthenticationError, OnectaRateLimitError):
             raise
-        except (aiohttp.ClientError, asyncio.TimeoutError) as err:
+        except (TimeoutError, aiohttp.ClientError) as err:
             raise OnectaConnectionError(str(err)) from err
 
     async def get_gateway_devices(self) -> list[GatewayDevice]:
