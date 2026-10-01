@@ -8,7 +8,7 @@ from syrupy import SnapshotAssertion
 from syrupy.extensions.single_file import SingleFileAmberSnapshotExtension
 
 from daikin_onecta import GatewayDevice
-from daikin_onecta.models import Characteristic
+from daikin_onecta.models import Characteristic, Schedule, ScheduleOption, ScheduleSelection
 
 FIXTURES = Path(__file__).parent / "fixtures"
 DEVICE_FIXTURES = sorted(path.name for path in FIXTURES.glob("*.json"))
@@ -98,6 +98,61 @@ def test_schedule_selections(snapshot: SnapshotAssertion) -> None:
     assert [selection.to_dict() for selection in schedule.value.selections] == snapshot(
         extension_class=SingleFileAmberSnapshotExtension
     )
+
+
+
+def test_schedule_selection_current_option() -> None:
+    """Return the selected schedule name only when scheduling is enabled."""
+    options = [ScheduleOption(id="0", name="Weekday")]
+    disabled = ScheduleSelection(
+        mode="heating",
+        selected="0",
+        options=options,
+        enabled=False,
+        enabled_settable=True,
+    )
+    enabled = ScheduleSelection(
+        mode="heating",
+        selected="0",
+        options=options,
+        enabled=True,
+        enabled_settable=True,
+    )
+    missing = ScheduleSelection(
+        mode="heating",
+        selected="1",
+        options=options,
+        enabled=True,
+        enabled_settable=True,
+    )
+
+    assert disabled.current_option is None
+    assert enabled.current_option == "Weekday"
+    assert missing.current_option == "1"
+
+
+def test_schedule_selections_ignore_invalid_data() -> None:
+    """Ignore malformed schedule modes and invalid schedule identifiers."""
+    schedule = Schedule(
+        modes={
+            "missing": {},
+            "invalid-current": {"currentSchedule": "invalid"},
+            "invalid-selected": {"currentSchedule": {"value": 0, "values": ["0"]}},
+            "invalid-values": {"currentSchedule": {"value": "0", "values": "invalid"}},
+            "valid": {
+                "currentSchedule": {"value": "0", "values": ["0", 1]},
+                "enabled": {"value": True, "settable": True},
+                "schedules": {"0": {"name": {"value": "Weekday"}}},
+            },
+        }
+    )
+
+    selections = schedule.selections
+
+    assert len(selections) == 1
+    assert selections[0].mode == "valid"
+    assert selections[0].options == [ScheduleOption(id="0", name="Weekday")]
+
 
 
 def test_holiday_mode(snapshot: SnapshotAssertion) -> None:
