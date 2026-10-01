@@ -1,15 +1,10 @@
 """Models returned by the Daikin Onecta API."""
 
-from dataclasses import dataclass
-from dataclasses import field
+from dataclasses import dataclass, field
 from typing import Any
-from typing import Generic
-from typing import TypeVar
 
 from mashumaro import DataClassDictMixin
 from mashumaro.config import BaseConfig
-
-T = TypeVar("T")
 
 
 class OnectaModel(DataClassDictMixin):
@@ -22,7 +17,7 @@ class OnectaModel(DataClassDictMixin):
 
 
 @dataclass(slots=True)
-class Characteristic(OnectaModel, Generic[T]):
+class Characteristic[T](OnectaModel):
     """Common envelope used by Daikin management-point characteristics."""
 
     value: T
