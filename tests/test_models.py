@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 from syrupy import SnapshotAssertion
+from syrupy.extensions.single_file import SingleFileAmberSnapshotExtension
 
 from daikin_onecta import GatewayDevice
 from daikin_onecta.models import Characteristic
@@ -203,4 +204,4 @@ def test_all_existing_device_fixtures(fixture: str, snapshot: SnapshotAssertion)
             ],
         }
         for device in devices
-    ] == snapshot
+    ] == snapshot(extension_class=SingleFileAmberSnapshotExtension)
