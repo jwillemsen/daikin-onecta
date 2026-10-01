@@ -265,14 +265,18 @@ class FanOperationMode(OnectaModel):
 
 @dataclass(slots=True)
 class FanControl(OnectaModel):
-    """Fan controls grouped by HVAC operation mode."""
+    """Fan controls grouped by HVAC or air-purification operation mode."""
 
-    operation_modes: dict[str, FanOperationMode]
+    operation_modes: dict[str, FanOperationMode] | None = None
+    air_purification_modes: dict[str, FanOperationMode] | None = None
 
     class Config(OnectaModel.Config):
         """Mashumaro configuration."""
 
-        aliases = {"operation_modes": "operationModes"}
+        aliases = {
+            "operation_modes": "operationModes",
+            "air_purification_modes": "airPurificationModes",
+        }
 
 
 @dataclass(slots=True)
