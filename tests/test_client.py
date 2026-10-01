@@ -1,14 +1,16 @@
 """Tests for the Daikin Onecta client."""
 
 import aiohttp
-from yarl import URL
-from aioresponses import aioresponses
 import pytest
+from aioresponses import aioresponses
+from yarl import URL
 
-from daikin_onecta import OnectaApiError
-from daikin_onecta import OnectaAuthenticationError
-from daikin_onecta import OnectaClient
-from daikin_onecta import OnectaRateLimitError
+from daikin_onecta import (
+    OnectaApiError,
+    OnectaAuthenticationError,
+    OnectaClient,
+    OnectaRateLimitError,
+)
 
 BASE_URL = "https://api.onecta.daikineurope.com"
 
@@ -21,7 +23,14 @@ async def token_provider() -> str:
 @pytest.mark.asyncio
 async def test_get_gateway_devices() -> None:
     """Return gateway devices from the API."""
-    payload = [\n        {\n            "id": "gateway-1",\n            "deviceModel": "test",\n            "isCloudConnectionUp": {"value": True, "settable": False},\n            "managementPoints": [],\n        }\n    ]
+    payload = [
+        {
+            "id": "gateway-1",
+            "deviceModel": "test",
+            "isCloudConnectionUp": {"value": True, "settable": False},
+            "managementPoints": [],
+        }
+    ]
 
     async with aiohttp.ClientSession() as session:
         with aioresponses() as mocked:
@@ -32,7 +41,12 @@ async def test_get_gateway_devices() -> None:
             )
             client = OnectaClient(session, token_provider)
 
-            assert await client.get_gateway_devices() == payload
+            devices = await client.get_gateway_devices()
+
+            assert len(devices) == 1
+            assert devices[0].id == "gateway-1"
+            assert devices[0].device_model == "test"
+            assert devices[0].available is True
             assert client.rate_limit.day_remaining == 123
 
 
