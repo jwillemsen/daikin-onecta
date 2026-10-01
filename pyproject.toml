@@ -7,7 +7,7 @@ name = "daikin-onecta"
 version = "0.1.0"
 description = "Async Python client for the Daikin Onecta cloud API"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 license = "MIT"
 authors = [
   { name = "Johnny Willemsen" },
@@ -15,8 +15,6 @@ authors = [
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.12",
-  "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
@@ -49,7 +47,7 @@ addopts = "--cov=daikin_onecta --cov-report=term-missing"
 
 [tool.ruff]
 line-length = 120
-target-version = "py312"
+target-version = "py314"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP"]
