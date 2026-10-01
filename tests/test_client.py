@@ -1,13 +1,15 @@
 """Tests for the Daikin Onecta client."""
 
 import aiohttp
-from aioresponses import aioresponses
 import pytest
+from aioresponses import aioresponses
 
-from daikin_onecta import OnectaApiError
-from daikin_onecta import OnectaAuthenticationError
-from daikin_onecta import OnectaClient
-from daikin_onecta import OnectaRateLimitError
+from daikin_onecta import (
+    OnectaApiError,
+    OnectaAuthenticationError,
+    OnectaClient,
+    OnectaRateLimitError,
+)
 
 BASE_URL = "https://api.onecta.daikineurope.com"
 
