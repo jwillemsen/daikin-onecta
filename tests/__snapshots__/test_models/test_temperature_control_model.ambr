@@ -1,0 +1,15 @@
+# serializer version: 1
+# name: test_temperature_control_model
+  dict({
+    'max_value': 23,
+    'min_value': 18,
+    'operation_modes': list([
+      'auto',
+      'cooling',
+      'heating',
+    ]),
+    'settable': True,
+    'step_value': 0.5,
+    'value': 18,
+  })
+# ---

@@ -1,0 +1,19 @@
+# serializer version: 1
+# name: test_all_existing_device_fixtures[homehub.json]
+  list([
+    dict({
+      'available': True,
+      'management_points': list([
+        dict({
+          'id': 'gateway',
+          'name': None,
+          'operation_mode': None,
+          'operation_modes': None,
+          'sub_type': None,
+          'type': 'gateway',
+        }),
+      ]),
+      'model': 'homehub',
+    }),
+  ])
+# ---

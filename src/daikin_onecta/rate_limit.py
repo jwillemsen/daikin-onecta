@@ -27,7 +27,7 @@ class RateLimit:
     reset: int | None = None
 
     @classmethod
-    def from_headers(cls, headers: Mapping[str, str]) -> "RateLimit":
+    def from_headers(cls, headers: Mapping[str, str]) -> RateLimit:
         """Create rate-limit state from Daikin response headers."""
         return cls(
             minute_limit=_header_int(headers, "X-RateLimit-Limit-minute"),
