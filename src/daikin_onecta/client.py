@@ -77,7 +77,7 @@ class OnectaClient:
                     return json.loads(response_text)
                 except json.JSONDecodeError as err:
                     raise OnectaApiError(response.status, "Invalid JSON response") from err
-        except (OnectaApiError, OnectaAuthenticationError, OnectaRateLimitError):
+        except OnectaApiError, OnectaAuthenticationError, OnectaRateLimitError:
             raise
         except (TimeoutError, aiohttp.ClientError) as err:
             raise OnectaConnectionError(str(err)) from err
