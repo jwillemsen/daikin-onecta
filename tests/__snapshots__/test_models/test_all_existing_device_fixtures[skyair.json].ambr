@@ -1,0 +1,137 @@
+# serializer version: 1
+# name: test_all_existing_device_fixtures[skyair.json]
+  list([
+    dict({
+      'available': True,
+      'management_points': list([
+        dict({
+          'id': 'gateway',
+          'name': 'Gateway',
+          'operation_mode': None,
+          'operation_modes': None,
+          'sub_type': None,
+          'type': 'gateway',
+        }),
+        dict({
+          'id': 'climateControl',
+          'name': 'Гостиная / Woonkamer',
+          'operation_mode': 'cooling',
+          'operation_modes': list([
+            'auto',
+            'dry',
+            'cooling',
+            'heating',
+            'fanOnly',
+          ]),
+          'sub_type': 'mainZone',
+          'type': 'climateControl',
+        }),
+        dict({
+          'id': 'indoorUnit',
+          'name': 'Indoor Unit',
+          'operation_mode': None,
+          'operation_modes': None,
+          'sub_type': None,
+          'type': 'indoorUnit',
+        }),
+        dict({
+          'id': 'outdoorUnit',
+          'name': None,
+          'operation_mode': None,
+          'operation_modes': None,
+          'sub_type': None,
+          'type': 'outdoorUnit',
+        }),
+      ]),
+      'model': 'dx23',
+    }),
+    dict({
+      'available': True,
+      'management_points': list([
+        dict({
+          'id': 'gateway',
+          'name': 'Gateway',
+          'operation_mode': None,
+          'operation_modes': None,
+          'sub_type': None,
+          'type': 'gateway',
+        }),
+        dict({
+          'id': 'climateControl',
+          'name': 'Slaapkamer André / Olha',
+          'operation_mode': 'cooling',
+          'operation_modes': list([
+            'auto',
+            'dry',
+            'cooling',
+            'heating',
+            'fanOnly',
+          ]),
+          'sub_type': 'mainZone',
+          'type': 'climateControl',
+        }),
+        dict({
+          'id': 'indoorUnit',
+          'name': 'Indoor Unit',
+          'operation_mode': None,
+          'operation_modes': None,
+          'sub_type': None,
+          'type': 'indoorUnit',
+        }),
+        dict({
+          'id': 'outdoorUnit',
+          'name': None,
+          'operation_mode': None,
+          'operation_modes': None,
+          'sub_type': None,
+          'type': 'outdoorUnit',
+        }),
+      ]),
+      'model': 'dx23',
+    }),
+    dict({
+      'available': True,
+      'management_points': list([
+        dict({
+          'id': 'gateway',
+          'name': 'Gateway',
+          'operation_mode': None,
+          'operation_modes': None,
+          'sub_type': None,
+          'type': 'gateway',
+        }),
+        dict({
+          'id': 'climateControl',
+          'name': 'третий блок/Спальня второй этаж',
+          'operation_mode': 'cooling',
+          'operation_modes': list([
+            'auto',
+            'dry',
+            'cooling',
+            'heating',
+            'fanOnly',
+          ]),
+          'sub_type': 'mainZone',
+          'type': 'climateControl',
+        }),
+        dict({
+          'id': 'indoorUnit',
+          'name': 'Indoor Unit',
+          'operation_mode': None,
+          'operation_modes': None,
+          'sub_type': None,
+          'type': 'indoorUnit',
+        }),
+        dict({
+          'id': 'outdoorUnit',
+          'name': None,
+          'operation_mode': None,
+          'operation_modes': None,
+          'sub_type': None,
+          'type': 'outdoorUnit',
+        }),
+      ]),
+      'model': 'dx23',
+    }),
+  ])
+# ---
