@@ -178,7 +178,10 @@ async def test_patch_characteristic(path: str | None, expected: dict[str, object
     """Patch a characteristic with an optional nested path."""
     async with aiohttp.ClientSession() as session:
         with aioresponses() as mocked:
-            url = f"{BASE_URL}/v1/gateway-devices/gateway-1/management-points/climateControl/characteristics/operationMode"
+            url = (
+                f"{BASE_URL}/v1/gateway-devices/gateway-1/management-points/climateControl"
+                "/characteristics/operationMode"
+            )
             mocked.patch(url, status=204)
             client = OnectaClient(session, token_provider)
 
