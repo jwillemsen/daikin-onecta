@@ -38,6 +38,7 @@ test = [
 ]
 dev = [
   "daikin-onecta[test]",
+  "mypy>=1.18",
   "ruff>=0.13",
 ]
 
@@ -51,3 +52,10 @@ target-version = "py314"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP"]
+
+[tool.mypy]
+files = ["src/daikin_onecta"]
+strict = true
+
+[tool.setuptools.package-data]
+daikin_onecta = ["py.typed"]
