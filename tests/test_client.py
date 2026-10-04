@@ -11,6 +11,7 @@ from daikin_onecta import (
     OnectaClient,
     OnectaConnectionError,
     OnectaRateLimitError,
+    OnectaResponseError,
 )
 
 BASE_URL = "https://api.onecta.daikineurope.com"
@@ -59,14 +60,25 @@ async def test_rate_limit_error() -> None:
             mocked.get(
                 f"{BASE_URL}/v1/gateway-devices",
                 status=429,
-                headers={"Retry-After": "60"},
+                headers={
+                    "Retry-After": "60",
+                    "X-RateLimit-Limit-minute": "120",
+                    "X-RateLimit-Remaining-day": "456",
+                    "RateLimit-Reset": "1200",
+                },
             )
             client = OnectaClient(session, token_provider)
 
             with pytest.raises(OnectaRateLimitError) as exc_info:
                 await client.get_gateway_devices()
 
-            assert exc_info.value.retry_after == 60
+            error = exc_info.value
+            assert error.method == "GET"
+            assert error.path == "/v1/gateway-devices"
+            assert error.retry_after == 60
+            assert error.rate_limit.minute_limit == 120
+            assert error.rate_limit.day_remaining == 456
+            assert error.rate_limit.reset == 1200
 
 
 @pytest.mark.asyncio
@@ -78,8 +90,12 @@ async def test_authentication_error(status: int) -> None:
             mocked.get(f"{BASE_URL}/v1/gateway-devices", status=status)
             client = OnectaClient(session, token_provider)
 
-            with pytest.raises(OnectaAuthenticationError):
+            with pytest.raises(OnectaAuthenticationError) as exc_info:
                 await client.get_gateway_devices()
+
+            assert exc_info.value.status == status
+            assert exc_info.value.method == "GET"
+            assert exc_info.value.path == "/v1/gateway-devices"
 
 
 @pytest.mark.asyncio
@@ -94,6 +110,8 @@ async def test_unexpected_api_error() -> None:
                 await client.get_gateway_devices()
 
             assert exc_info.value.status == 500
+            assert exc_info.value.method == "GET"
+            assert exc_info.value.path == "/v1/gateway-devices"
 
 
 @pytest.mark.asyncio
@@ -116,14 +134,18 @@ async def test_set_schedule() -> None:
 
 @pytest.mark.asyncio
 async def test_invalid_json_response() -> None:
-    """Translate a successful non-JSON response to an API error."""
+    """Translate a successful non-JSON response to a response error."""
     async with aiohttp.ClientSession() as session:
         with aioresponses() as mocked:
             mocked.get(f"{BASE_URL}/v1/gateway-devices", status=200, body="not json")
             client = OnectaClient(session, token_provider)
 
-            with pytest.raises(OnectaApiError, match="Invalid JSON response"):
+            with pytest.raises(OnectaResponseError, match="Invalid JSON response") as exc_info:
                 await client.get_gateway_devices()
+
+            assert exc_info.value.status == 200
+            assert exc_info.value.method == "GET"
+            assert exc_info.value.path == "/v1/gateway-devices"
 
 
 @pytest.mark.asyncio
@@ -163,8 +185,11 @@ async def test_connection_error(error: Exception) -> None:
             mocked.get(f"{BASE_URL}/v1/gateway-devices", exception=error)
             client = OnectaClient(session, token_provider)
 
-            with pytest.raises(OnectaConnectionError, match=str(error)):
+            with pytest.raises(OnectaConnectionError, match=str(error)) as exc_info:
                 await client.get_gateway_devices()
+
+            assert exc_info.value.method == "GET"
+            assert exc_info.value.path == "/v1/gateway-devices"
 
 
 @pytest.mark.asyncio

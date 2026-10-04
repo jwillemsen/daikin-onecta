@@ -12,6 +12,8 @@ from .exceptions import (
     OnectaAuthenticationError,
     OnectaConnectionError,
     OnectaRateLimitError,
+    OnectaRequestError,
+    OnectaResponseError,
 )
 from .models import GatewayDevice
 from .rate_limit import RateLimit
@@ -61,15 +63,13 @@ class OnectaClient:
                 response_text = await response.text()
 
                 if response.status in (401, 403):
-                    raise OnectaAuthenticationError(
-                        f"Daikin Onecta API authentication failed with HTTP {response.status}"
-                    )
+                    raise OnectaAuthenticationError(response.status, method=method, path=path)
 
                 if response.status == 429:
-                    raise OnectaRateLimitError(self.rate_limit.retry_after)
+                    raise OnectaRateLimitError(self.rate_limit, method=method, path=path)
 
                 if response.status >= 400:
-                    raise OnectaApiError(response.status, response_text)
+                    raise OnectaApiError(response.status, response_text, method=method, path=path)
 
                 if response.status == 204 or not response_text:
                     return None
@@ -77,21 +77,36 @@ class OnectaClient:
                 try:
                     return json.loads(response_text)
                 except json.JSONDecodeError as err:
-                    raise OnectaApiError(response.status, "Invalid JSON response") from err
-        except OnectaApiError, OnectaAuthenticationError, OnectaRateLimitError:
+                    raise OnectaResponseError(
+                        response.status,
+                        "Invalid JSON response",
+                        method=method,
+                        path=path,
+                    ) from err
+        except OnectaRequestError:
             raise
         except (TimeoutError, aiohttp.ClientError) as err:
-            raise OnectaConnectionError(str(err)) from err
+            raise OnectaConnectionError(str(err), method=method, path=path) from err
 
     async def get_gateway_devices(self) -> list[GatewayDevice]:
         """Return all gateway devices available to the account."""
         data = await self._request("GET", "/v1/gateway-devices")
         if not isinstance(data, list):
-            raise OnectaApiError(200, "Expected a list of gateway devices")
+            raise OnectaResponseError(
+                200,
+                "Expected a list of gateway devices",
+                method="GET",
+                path="/v1/gateway-devices",
+            )
         try:
             return [GatewayDevice.from_dict(device) for device in data]
         except (MissingField, TypeError, ValueError) as err:
-            raise OnectaApiError(200, "Invalid gateway device data") from err
+            raise OnectaResponseError(
+                200,
+                "Invalid gateway device data",
+                method="GET",
+                path="/v1/gateway-devices",
+            ) from err
 
     async def set_schedule(
         self,

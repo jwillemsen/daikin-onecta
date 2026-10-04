@@ -7,6 +7,8 @@ from .exceptions import (
     OnectaConnectionError,
     OnectaError,
     OnectaRateLimitError,
+    OnectaRequestError,
+    OnectaResponseError,
 )
 from .models import GatewayDevice
 from .rate_limit import RateLimit
@@ -19,5 +21,7 @@ __all__ = [
     "OnectaConnectionError",
     "OnectaError",
     "OnectaRateLimitError",
+    "OnectaRequestError",
+    "OnectaResponseError",
     "RateLimit",
 ]

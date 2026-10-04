@@ -31,6 +31,20 @@ async with aiohttp.ClientSession() as session:
 Authentication is supplied by an asynchronous token callback so applications
 remain responsible for their own OAuth flow and token refresh.
 
+## Errors
+
+Requests raise typed exceptions instead of returning error sentinel values:
+
+- `OnectaAuthenticationError` for HTTP 401 and 403 responses;
+- `OnectaRateLimitError` for HTTP 429 responses;
+- `OnectaApiError` for other unsuccessful HTTP responses;
+- `OnectaResponseError` when a successful response has an invalid body;
+- `OnectaConnectionError` for transport failures.
+
+All request errors provide their HTTP `method` and relative API `path`.
+`OnectaRateLimitError.rate_limit` contains the immutable rate-limit snapshot
+returned with the rejected response, including `retry_after`.
+
 ## Status
 
 The API is currently alpha. The first release intentionally exposes gateway
