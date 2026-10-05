@@ -469,6 +469,28 @@ class ManagementPoint(OnectaModel):
                 result[name] = characteristic
         return result
 
+    @property
+    def model(self) -> str | None:
+        """Return the management point's model identifier, when reported."""
+        return self.model_info.value if self.model_info is not None else None
+
+    @property
+    def serial(self) -> str | None:
+        """Return the management point's serial number, when reported."""
+        return self.serial_number.value if self.serial_number is not None else None
+
+    @property
+    def version(self) -> str | None:
+        """Return the best available software version for the management point."""
+        for characteristic in (
+            self.software_version,
+            self.firmware_version,
+            self.eeprom_version,
+        ):
+            if characteristic is not None and characteristic.value:
+                return characteristic.value
+        return None
+
 
 @dataclass(slots=True)
 class GatewayDevice(OnectaModel):
@@ -525,6 +547,13 @@ class GatewayDevice(OnectaModel):
             if point.name is not None and point.name.value:
                 return point.name.value
         return self.device_model
+
+    @property
+    def mac_address(self) -> str | None:
+        """Return the gateway MAC address, when provided by the cloud."""
+        gateway = self.gateway_management_point
+        mac_address = gateway.characteristic("macAddress") if gateway is not None else None
+        return mac_address.value if mac_address is not None else None
 
     @property
     def available(self) -> bool:
