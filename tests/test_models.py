@@ -269,3 +269,66 @@ def test_management_point_lookup() -> None:
     assert device.management_point("missing") is None
     assert device.management_point_by_type("missing") is None
     assert device.management_points_by_type("missing") == []
+
+
+def test_gateway_derived_metadata() -> None:
+    """Expose display and gateway-management-point details from API models."""
+    device = load_devices("altherma.json")[0]
+
+    assert device.gateway_management_point is not None
+    assert device.gateway_embedded_id == device.gateway_management_point.embedded_id
+    assert device.mac_address == device.gateway_management_point.characteristic("macAddress").value
+    assert device.display_name == next(
+        point.name.value
+        for point in device.management_points_by_type("climateControl")
+        if point.name is not None and point.name.value
+    )
+
+
+def test_management_point_derived_metadata() -> None:
+    """Expose API metadata without making consumers inspect envelopes."""
+    device = load_devices("altherma_firmwareupdate.json")[0]
+    point = device.gateway_management_point
+
+    assert point is not None
+    assert point.model == point.model_info.value
+    assert point.serial == point.serial_number.value
+    assert point.firmware_version is not None
+    assert point.version == point.firmware_version.value
+
+
+def test_management_point_derived_metadata_is_optional() -> None:
+    """Keep absent management-point metadata absent."""
+    device = GatewayDevice.from_dict(
+        {
+            "id": "gateway-1",
+            "deviceModel": "Daikin Model",
+            "isCloudConnectionUp": {"value": True},
+            "managementPoints": [
+                {
+                    "embeddedId": "gateway",
+                    "managementPointType": "gateway",
+                }
+            ],
+        }
+    )
+    point = device.gateway_management_point
+
+    assert point is not None
+    assert point.model is None
+    assert point.serial is None
+    assert point.version is None
+
+
+def test_gateway_display_name_falls_back_to_model() -> None:
+    """Use the gateway model where the cloud has no named climate point."""
+    device = GatewayDevice.from_dict(
+        {
+            "id": "gateway-1",
+            "deviceModel": "Daikin Model",
+            "isCloudConnectionUp": {"value": True},
+            "managementPoints": [],
+        }
+    )
+
+    assert device.display_name == "Daikin Model"
