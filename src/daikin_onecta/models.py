@@ -508,6 +508,25 @@ class GatewayDevice(OnectaModel):
         return next(iter(self.management_points_by_type(management_point_type)), None)
 
     @property
+    def gateway_management_point(self) -> ManagementPoint | None:
+        """Return the gateway management point, when provided by the cloud."""
+        return self.management_point_by_type("gateway")
+
+    @property
+    def gateway_embedded_id(self) -> str | None:
+        """Return the embedded ID used to address the gateway management point."""
+        gateway = self.gateway_management_point
+        return gateway.embedded_id if gateway is not None else None
+
+    @property
+    def display_name(self) -> str:
+        """Return the cloud-provided climate name or the gateway model name."""
+        for point in self.management_points_by_type("climateControl"):
+            if point.name is not None and point.name.value:
+                return point.name.value
+        return self.device_model
+
+    @property
     def available(self) -> bool:
         """Return whether the gateway is connected to the Daikin cloud."""
         return self.cloud_connection.value

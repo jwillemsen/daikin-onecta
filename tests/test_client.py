@@ -1,5 +1,7 @@
 """Tests for the Daikin Onecta client."""
 
+from datetime import date
+
 import aiohttp
 import pytest
 from aioresponses import aioresponses
@@ -273,3 +275,80 @@ async def test_disable_schedule() -> None:
                 "scheduleId": "scheduleHeatingRT2",
                 "enabled": False,
             }
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("enabled", "start_date", "end_date", "expected"),
+    [
+        (
+            True,
+            date(2026, 10, 5),
+            date(2026, 12, 4),
+            {"enabled": True, "startDate": "2026-10-05", "endDate": "2026-12-04"},
+        ),
+        (False, None, None, {"enabled": False}),
+    ],
+)
+async def test_set_holiday_mode(
+    enabled: bool,
+    start_date: date | None,
+    end_date: date | None,
+    expected: dict[str, str | bool],
+) -> None:
+    """Set holiday mode through its typed API endpoint."""
+    async with aiohttp.ClientSession() as session:
+        with aioresponses() as mocked:
+            url = f"{BASE_URL}/v1/gateway-devices/gateway-1/management-points/climateControl/holiday-mode"
+            mocked.post(url, status=204)
+            client = OnectaClient(session, token_provider)
+
+            await client.set_holiday_mode(
+                "gateway-1",
+                "climateControl",
+                enabled,
+                start_date=start_date,
+                end_date=end_date,
+            )
+
+            request = mocked.requests[("POST", URL(url))][0]
+            assert request.kwargs["json"] == expected
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("enabled", "start_date", "end_date"),
+    [(True, None, None), (False, date(2026, 10, 5), date(2026, 12, 4))],
+)
+async def test_set_holiday_mode_rejects_invalid_dates(
+    enabled: bool,
+    start_date: date | None,
+    end_date: date | None,
+) -> None:
+    """Reject invalid holiday-mode payloads before making a cloud request."""
+    async with aiohttp.ClientSession() as session:
+        client = OnectaClient(session, token_provider)
+
+        with pytest.raises(ValueError):
+            await client.set_holiday_mode(
+                "gateway-1",
+                "climateControl",
+                enabled,
+                start_date=start_date,
+                end_date=end_date,
+            )
+
+
+@pytest.mark.asyncio
+async def test_install_firmware() -> None:
+    """Start a firmware installation through its typed API endpoint."""
+    async with aiohttp.ClientSession() as session:
+        with aioresponses() as mocked:
+            url = f"{BASE_URL}/v1/gateway-devices/gateway-1/management-points/gateway/firmware/firmware-1"
+            mocked.put(url, status=204)
+            client = OnectaClient(session, token_provider)
+
+            await client.install_firmware("gateway-1", "gateway", "firmware-1")
+
+            request = mocked.requests[("PUT", URL(url))][0]
+            assert request.kwargs["json"] is None

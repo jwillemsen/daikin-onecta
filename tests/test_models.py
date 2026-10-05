@@ -269,3 +269,30 @@ def test_management_point_lookup() -> None:
     assert device.management_point("missing") is None
     assert device.management_point_by_type("missing") is None
     assert device.management_points_by_type("missing") == []
+
+
+def test_gateway_derived_metadata() -> None:
+    """Expose display and gateway-management-point details from API models."""
+    device = load_devices("altherma.json")[0]
+
+    assert device.gateway_management_point is not None
+    assert device.gateway_embedded_id == device.gateway_management_point.embedded_id
+    assert device.display_name == next(
+        point.name.value
+        for point in device.management_points_by_type("climateControl")
+        if point.name is not None and point.name.value
+    )
+
+
+def test_gateway_display_name_falls_back_to_model() -> None:
+    """Use the gateway model where the cloud has no named climate point."""
+    device = GatewayDevice.from_dict(
+        {
+            "id": "gateway-1",
+            "deviceModel": "Daikin Model",
+            "isCloudConnectionUp": {"value": True},
+            "managementPoints": [],
+        }
+    )
+
+    assert device.display_name == "Daikin Model"

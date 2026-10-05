@@ -2,6 +2,7 @@
 
 import json
 from collections.abc import Awaitable, Callable
+from datetime import date
 from typing import Any
 
 import aiohttp
@@ -123,6 +124,46 @@ class OnectaClient:
             management_point_id,
             f"schedule/{mode}/current",
             {"scheduleId": schedule, "enabled": enabled},
+        )
+
+    async def set_holiday_mode(
+        self,
+        gateway_id: str,
+        management_point_id: str,
+        enabled: bool,
+        *,
+        start_date: date | None = None,
+        end_date: date | None = None,
+    ) -> None:
+        """Enable or disable holiday mode for a management point.
+
+        The ONECTA API requires both dates when enabling holiday mode and
+        rejects dates when disabling it.
+        """
+        if enabled and (start_date is None or end_date is None):
+            raise ValueError("Holiday mode requires start_date and end_date when enabled")
+        if not enabled and (start_date is not None or end_date is not None):
+            raise ValueError("Holiday mode dates must not be sent when disabled")
+
+        value: dict[str, str | bool] = {"enabled": enabled}
+        if enabled:
+            assert start_date is not None
+            assert end_date is not None
+            value["startDate"] = start_date.isoformat()
+            value["endDate"] = end_date.isoformat()
+        await self.post_management_point(gateway_id, management_point_id, "holiday-mode", value)
+
+    async def install_firmware(
+        self,
+        gateway_id: str,
+        management_point_id: str,
+        firmware_id: str,
+    ) -> None:
+        """Start installation of an offered firmware version."""
+        await self.put_management_point(
+            gateway_id,
+            management_point_id,
+            f"firmware/{firmware_id}",
         )
 
     async def patch_characteristic(
