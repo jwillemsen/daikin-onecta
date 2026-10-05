@@ -7,6 +7,10 @@ class OnectaError(Exception):
     """Base exception for Daikin Onecta errors."""
 
 
+class OnectaAccessTokenError(OnectaError):
+    """Raised when an OAuth access token cannot provide an account ID."""
+
+
 class OnectaRequestError(OnectaError):
     """Base exception for a failed request to the Daikin Onecta API."""
 
