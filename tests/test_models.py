@@ -281,6 +281,88 @@ def test_scalar_and_energy_views() -> None:
     assert point.consumption.current_total("electrical", "heating", "month") is None
 
 
+def test_platform_state_views_handle_absent_data() -> None:
+    """Keep unavailable platform-specific state absent without tree traversal."""
+    point = ManagementPoint(
+        embedded_id="gateway",
+        management_point_type="gateway",
+    )
+
+    assert point.domestic_hot_water is None
+    assert point.schedule_state is None
+    assert point.firmware is None
+    assert point.consumption is None
+    assert point.energy_output is None
+
+    hot_water = ManagementPoint(
+        embedded_id="hot-water",
+        management_point_type="domesticHotWaterTank",
+    ).domestic_hot_water
+    assert isinstance(hot_water, DomesticHotWater)
+    assert hot_water.power is None
+    assert hot_water.powerful_mode is None
+    assert hot_water.temperature is None
+
+    schedule = ScheduleState(point)
+    assert schedule.selections == []
+    assert schedule.active_selection is None
+
+    firmware = Firmware(point)
+    assert firmware.update_supported is False
+    assert firmware.offered_update is None
+    assert firmware.firmware_id is None
+    assert firmware.in_progress is False
+
+
+def test_energy_data_views_handle_unknown_and_rolling_values() -> None:
+    """Return absent data safely and calculate each documented rolling period."""
+    point = ManagementPoint.from_dict(
+        {
+            "embeddedId": "climate",
+            "managementPointType": "climateControl",
+            "consumptionData": {
+                "value": {
+                    "electrical": {
+                        "heating": {
+                            "d": [None] * 12 + [1.25],
+                            "w": [None] * 7 + [2.5],
+                            "m": [None] * 12 + [3.75],
+                        }
+                    }
+                }
+            },
+        }
+    )
+    energy = point.consumption
+    assert isinstance(energy, EnergyData)
+
+    assert energy.source("missing") is None
+    assert energy.series("electrical", "cooling") is None
+    assert energy.values("electrical", "cooling", "day") is None
+    assert energy.current_total("electrical", "cooling", "day") is None
+    assert energy.current_total("electrical", "heating", "week") == 2.5
+    assert energy.current_total("electrical", "heating", "month", month=0) is None
+    assert energy.current_total("electrical", "heating", "month", month=1) == 3.75
+
+
+def test_firmware_view_handles_optional_update_data() -> None:
+    """Expose firmware update state only when the cloud supplies useful values."""
+    firmware = Firmware(
+        ManagementPoint(
+            embedded_id="gateway",
+            management_point_type="gateway",
+            is_firmware_update_supported=Characteristic(value=True),
+            firmware_update=Characteristic(value={"id": 42}),
+            firmware_update_status=Characteristic(value="in-progress"),
+        )
+    )
+
+    assert firmware.update_supported is True
+    assert firmware.offered_update == {"id": 42}
+    assert firmware.firmware_id is None
+    assert firmware.in_progress is True
+
+
 def test_climate_control_view_handles_optional_data() -> None:
     """Keep unavailable climate data and non-climate points absent."""
     device = GatewayDevice.from_dict(
