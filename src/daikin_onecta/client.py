@@ -8,6 +8,8 @@ from typing import Any
 import aiohttp
 from mashumaro.exceptions import MissingField
 
+from .climate import ClimateControlClient
+from .domestic_hot_water import DomesticHotWaterClient
 from .exceptions import (
     OnectaApiError,
     OnectaAuthenticationError,
@@ -16,8 +18,10 @@ from .exceptions import (
     OnectaRequestError,
     OnectaResponseError,
 )
+from .firmware import FirmwareClient
 from .models import GatewayDevice
 from .rate_limit import RateLimit
+from .schedule import ScheduleClient
 
 ONECTA_API_URL = "https://api.onecta.daikineurope.com"
 
@@ -118,12 +122,15 @@ class OnectaClient:
         *,
         enabled: bool = True,
     ) -> None:
-        """Select or disable a configured schedule for a management-point mode."""
-        await self.put_management_point(
-            gateway_id,
-            management_point_id,
-            f"schedule/{mode}/current",
-            {"scheduleId": schedule, "enabled": enabled},
+        """Select or disable a configured schedule for a management-point mode.
+
+        This compatibility helper delegates to :meth:`schedule`.
+        New callers should use the bound schedule client.
+        """
+        await self.schedule(gateway_id, management_point_id).set_current(
+            mode,
+            schedule,
+            enabled=enabled,
         )
 
     async def set_holiday_mode(
@@ -137,21 +144,26 @@ class OnectaClient:
     ) -> None:
         """Enable or disable holiday mode for a management point.
 
-        The ONECTA API requires both dates when enabling holiday mode and
-        rejects dates when disabling it.
+        This compatibility helper delegates to :meth:`climate_control`.
+        New callers should use the bound climate-control client.
         """
-        if enabled and (start_date is None or end_date is None):
-            raise ValueError("Holiday mode requires start_date and end_date when enabled")
-        if not enabled and (start_date is not None or end_date is not None):
-            raise ValueError("Holiday mode dates must not be sent when disabled")
+        await self.climate_control(gateway_id, management_point_id).set_holiday_mode(
+            enabled,
+            start_date=start_date,
+            end_date=end_date,
+        )
 
-        value: dict[str, str | bool] = {"enabled": enabled}
-        if enabled:
-            assert start_date is not None
-            assert end_date is not None
-            value["startDate"] = start_date.isoformat()
-            value["endDate"] = end_date.isoformat()
-        await self.post_management_point(gateway_id, management_point_id, "holiday-mode", value)
+    def climate_control(self, gateway_id: str, management_point_id: str) -> ClimateControlClient:
+        """Return commands bound to one climate-control management point."""
+        return ClimateControlClient(self, gateway_id, management_point_id)
+
+    def domestic_hot_water(self, gateway_id: str, management_point_id: str) -> DomesticHotWaterClient:
+        """Return commands bound to one domestic-hot-water management point."""
+        return DomesticHotWaterClient(self, gateway_id, management_point_id)
+
+    def schedule(self, gateway_id: str, management_point_id: str) -> ScheduleClient:
+        """Return schedule commands bound to one management point."""
+        return ScheduleClient(self, gateway_id, management_point_id)
 
     async def install_firmware(
         self,
@@ -159,12 +171,16 @@ class OnectaClient:
         management_point_id: str,
         firmware_id: str,
     ) -> None:
-        """Start installation of an offered firmware version."""
-        await self.put_management_point(
-            gateway_id,
-            management_point_id,
-            f"firmware/{firmware_id}",
-        )
+        """Start installation of an offered firmware version.
+
+        This compatibility helper delegates to :meth:`firmware`.
+        New callers should use the bound firmware client.
+        """
+        await self.firmware(gateway_id, management_point_id).install(firmware_id)
+
+    def firmware(self, gateway_id: str, management_point_id: str) -> FirmwareClient:
+        """Return firmware commands bound to one management point."""
+        return FirmwareClient(self, gateway_id, management_point_id)
 
     async def patch_characteristic(
         self,

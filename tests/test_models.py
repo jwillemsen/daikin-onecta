@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 import pytest
-from syrupy import SnapshotAssertion
+from syrupy.assertion import SnapshotAssertion
 from syrupy.extensions.single_file import SingleFileAmberSnapshotExtension
 
 from daikin_onecta import GatewayDevice
@@ -44,7 +44,7 @@ def test_homehub_model(snapshot: SnapshotAssertion) -> None:
 
 def test_characteristic_aliases(snapshot: SnapshotAssertion) -> None:
     """Deserialize Daikin camel-case characteristic metadata."""
-    characteristic = Characteristic.from_dict(
+    characteristic: Characteristic[float] = Characteristic.from_dict(
         {
             "value": 21.5,
             "settable": True,
@@ -184,6 +184,7 @@ def test_fan_control_model(snapshot: SnapshotAssertion) -> None:
     point = next(point for point in device.management_points if point.fan_control is not None)
     fan_control = point.fan_control
     assert fan_control is not None
+    assert fan_control.value.operation_modes is not None
 
     heating = fan_control.value.operation_modes["heating"]
     assert heating.fan_speed is not None
@@ -277,7 +278,9 @@ def test_gateway_derived_metadata() -> None:
 
     assert device.gateway_management_point is not None
     assert device.gateway_embedded_id == device.gateway_management_point.embedded_id
-    assert device.mac_address == device.gateway_management_point.characteristic("macAddress").value
+    mac_address = device.gateway_management_point.characteristic("macAddress")
+    assert mac_address is not None
+    assert device.mac_address == mac_address.value
     assert device.display_name == next(
         point.name.value
         for point in device.management_points_by_type("climateControl")
@@ -291,6 +294,8 @@ def test_management_point_derived_metadata() -> None:
     point = device.gateway_management_point
 
     assert point is not None
+    assert point.model_info is not None
+    assert point.serial_number is not None
     assert point.model == point.model_info.value
     assert point.serial == point.serial_number.value
     assert point.firmware_version is not None
