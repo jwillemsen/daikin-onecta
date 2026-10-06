@@ -11,10 +11,13 @@ from daikin_onecta import GatewayDevice
 from daikin_onecta.models import (
     Characteristic,
     ClimateControl,
+    DomesticHotWater,
+    Firmware,
     ManagementPoint,
     Schedule,
     ScheduleOption,
     ScheduleSelection,
+    ScheduleState,
     TemperatureControl,
 )
 
@@ -239,6 +242,25 @@ def test_climate_control_view() -> None:
     assert climate.fan_operation("missing") is None
     assert climate.preset("powerfulMode") is point.characteristic("powerfulMode")
     assert climate.preset("holidayMode") is point.holiday_mode
+
+
+def test_platform_state_views() -> None:
+    """Expose hot-water, schedule, and firmware state without API-tree traversal."""
+    points = [point for device in load_devices("altherma_firmwareupdate.json") for point in device.management_points]
+
+    hot_water = next(point.domestic_hot_water for point in points if point.domestic_hot_water)
+    assert isinstance(hot_water, DomesticHotWater)
+    assert hot_water.temperature is not None
+    assert hot_water.current_temperature is not None
+
+    schedule_points = [point for device in load_devices("altherma_schedule.json") for point in device.management_points]
+    schedule = next(point.schedule_state for point in schedule_points if point.schedule_state)
+    assert isinstance(schedule, ScheduleState)
+    assert schedule.active_selection is not None
+
+    firmware = next(point.firmware for point in points if point.firmware)
+    assert isinstance(firmware, Firmware)
+    assert firmware.installed_version is not None
 
 
 def test_climate_control_view_handles_optional_data() -> None:

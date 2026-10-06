@@ -15,7 +15,13 @@ from .exceptions import (
     OnectaResponseError,
 )
 from .firmware import FirmwareClient
-from .models import ClimateControl, GatewayDevice
+from .models import (
+    ClimateControl,
+    DomesticHotWater,
+    Firmware,
+    GatewayDevice,
+    ScheduleState,
+)
 from .rate_limit import RateLimit
 from .schedule import ScheduleClient
 
@@ -23,8 +29,10 @@ __all__ = [
     "GatewayDevice",
     "ClimateControl",
     "ClimateControlClient",
+    "DomesticHotWater",
     "DomesticHotWaterClient",
     "FirmwareClient",
+    "Firmware",
     "OnectaAccessTokenError",
     "OnectaApiError",
     "OnectaAuthenticationError",
@@ -36,5 +44,6 @@ __all__ = [
     "OnectaResponseError",
     "RateLimit",
     "ScheduleClient",
+    "ScheduleState",
     "get_account_id",
 ]
