@@ -8,7 +8,15 @@ from syrupy.assertion import SnapshotAssertion
 from syrupy.extensions.single_file import SingleFileAmberSnapshotExtension
 
 from daikin_onecta import GatewayDevice
-from daikin_onecta.models import Characteristic, Schedule, ScheduleOption, ScheduleSelection
+from daikin_onecta.models import (
+    Characteristic,
+    ClimateControl,
+    ManagementPoint,
+    Schedule,
+    ScheduleOption,
+    ScheduleSelection,
+    TemperatureControl,
+)
 
 FIXTURES = Path(__file__).parent / "fixtures"
 DEVICE_FIXTURES = sorted(path.name for path in FIXTURES.glob("*.json"))
@@ -199,6 +207,110 @@ def test_fan_control_model(snapshot: SnapshotAssertion) -> None:
         ),
         "vertical": (heating.fan_direction.vertical.current_mode.to_dict() if heating.fan_direction.vertical else None),
     } == snapshot(extension_class=SingleFileAmberSnapshotExtension)
+
+
+def test_climate_control_view() -> None:
+    """Expose native climate state without consumers traversing API trees."""
+    device = load_devices("climate_floorheatingairflow.json")[0]
+    point = next(
+        point
+        for point in device.management_points
+        if point.management_point_type == "climateControl" and point.fan_control is not None
+    )
+
+    climate = point.climate_control
+
+    assert isinstance(climate, ClimateControl)
+    assert point.operation_mode is not None
+    assert climate.management_point is point
+    assert climate.operation_mode is point.operation_mode
+    assert climate.on_off_mode is point.on_off_mode
+    assert climate.native_operation_mode == point.operation_mode.value
+    assert climate.native_operation_modes == point.operation_mode.values
+    assert climate.setpoint_types == ["roomTemperature"]
+    setpoint = climate.setpoint("roomTemperature")
+    assert setpoint is not None
+    assert setpoint.value == 23.5
+    assert climate.setpoint("roomTemperature", "missing") is None
+    assert climate.current_temperature("roomTemperature") == 18
+    assert climate.current_temperature("leavingWaterOffset") is None
+    assert climate.sensory_data("missing") is None
+    assert climate.fan_operation() is not None
+    assert climate.fan_operation("missing") is None
+    assert climate.preset("powerfulMode") is point.characteristic("powerfulMode")
+    assert climate.preset("holidayMode") is point.holiday_mode
+
+
+def test_climate_control_view_handles_optional_data() -> None:
+    """Keep unavailable climate data and non-climate points absent."""
+    device = GatewayDevice.from_dict(
+        {
+            "id": "gateway-1",
+            "deviceModel": "Daikin Model",
+            "isCloudConnectionUp": {"value": True},
+            "managementPoints": [
+                {"embeddedId": "gateway", "managementPointType": "gateway"},
+                {
+                    "embeddedId": "climateControl",
+                    "managementPointType": "climateControl",
+                    "operationMode": {"value": "cooling"},
+                    "temperatureControl": {
+                        "value": {
+                            "operationModes": {
+                                "cooling": {
+                                    "setpoints": {
+                                        "leavingWaterOffset": {"value": 2},
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "sensoryData": {
+                        "value": {
+                            "leavingWaterTemperature": {"value": 31.5},
+                        }
+                    },
+                },
+            ],
+        }
+    )
+
+    assert device.gateway_management_point is not None
+    assert device.gateway_management_point.climate_control is None
+    climate_point = device.management_point_by_type("climateControl")
+    assert climate_point is not None
+    climate = climate_point.climate_control
+    assert climate is not None
+    assert climate.operation_mode is climate_point.operation_mode
+    assert climate.on_off_mode is None
+    assert climate.native_operation_mode == "cooling"
+    assert climate.native_operation_modes == ["cooling"]
+    assert climate.setpoint_types == ["leavingWaterOffset"]
+    assert climate.setpoint("roomTemperature") is None
+    assert climate.setpoint("leavingWaterOffset") is not None
+    assert climate.sensory_data("roomTemperature") is None
+    assert climate.current_temperature("roomTemperature") is None
+    assert climate.current_temperature("leavingWaterOffset") == 31.5
+    assert climate.fan_operation() is None
+    assert climate.preset("powerfulMode") is None
+
+    empty = ManagementPoint(
+        embedded_id="emptyClimateControl",
+        management_point_type="climateControl",
+    ).climate_control
+    assert empty is not None
+    assert empty.native_operation_modes == []
+    assert empty.setpoint("roomTemperature") is None
+    assert empty.setpoint_types == []
+    assert empty.sensory_data("roomTemperature") is None
+
+    no_mode = ManagementPoint(
+        embedded_id="noModeClimateControl",
+        management_point_type="climateControl",
+        temperature_control=Characteristic(value=TemperatureControl(operation_modes={})),
+    ).climate_control
+    assert no_mode is not None
+    assert no_mode.setpoint("roomTemperature") is None
 
 
 def test_consumption_data_model(snapshot: SnapshotAssertion) -> None:

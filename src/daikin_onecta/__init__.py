@@ -15,12 +15,13 @@ from .exceptions import (
     OnectaResponseError,
 )
 from .firmware import FirmwareClient
-from .models import GatewayDevice
+from .models import ClimateControl, GatewayDevice
 from .rate_limit import RateLimit
 from .schedule import ScheduleClient
 
 __all__ = [
     "GatewayDevice",
+    "ClimateControl",
     "ClimateControlClient",
     "DomesticHotWaterClient",
     "FirmwareClient",
