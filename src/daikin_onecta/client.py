@@ -9,6 +9,7 @@ import aiohttp
 from mashumaro.exceptions import MissingField
 
 from .climate import ClimateControlClient
+from .domestic_hot_water import DomesticHotWaterClient
 from .exceptions import (
     OnectaApiError,
     OnectaAuthenticationError,
@@ -17,8 +18,10 @@ from .exceptions import (
     OnectaRequestError,
     OnectaResponseError,
 )
+from .firmware import FirmwareClient
 from .models import GatewayDevice
 from .rate_limit import RateLimit
+from .schedule import ScheduleClient
 
 ONECTA_API_URL = "https://api.onecta.daikineurope.com"
 
@@ -119,12 +122,15 @@ class OnectaClient:
         *,
         enabled: bool = True,
     ) -> None:
-        """Select or disable a configured schedule for a management-point mode."""
-        await self.put_management_point(
-            gateway_id,
-            management_point_id,
-            f"schedule/{mode}/current",
-            {"scheduleId": schedule, "enabled": enabled},
+        """Select or disable a configured schedule for a management-point mode.
+
+        This compatibility helper delegates to :meth:`schedule`.
+        New callers should use the bound schedule client.
+        """
+        await self.schedule(gateway_id, management_point_id).set_current(
+            mode,
+            schedule,
+            enabled=enabled,
         )
 
     async def set_holiday_mode(
@@ -151,18 +157,30 @@ class OnectaClient:
         """Return commands bound to one climate-control management point."""
         return ClimateControlClient(self, gateway_id, management_point_id)
 
+    def domestic_hot_water(self, gateway_id: str, management_point_id: str) -> DomesticHotWaterClient:
+        """Return commands bound to one domestic-hot-water management point."""
+        return DomesticHotWaterClient(self, gateway_id, management_point_id)
+
+    def schedule(self, gateway_id: str, management_point_id: str) -> ScheduleClient:
+        """Return schedule commands bound to one management point."""
+        return ScheduleClient(self, gateway_id, management_point_id)
+
     async def install_firmware(
         self,
         gateway_id: str,
         management_point_id: str,
         firmware_id: str,
     ) -> None:
-        """Start installation of an offered firmware version."""
-        await self.put_management_point(
-            gateway_id,
-            management_point_id,
-            f"firmware/{firmware_id}",
-        )
+        """Start installation of an offered firmware version.
+
+        This compatibility helper delegates to :meth:`firmware`.
+        New callers should use the bound firmware client.
+        """
+        await self.firmware(gateway_id, management_point_id).install(firmware_id)
+
+    def firmware(self, gateway_id: str, management_point_id: str) -> FirmwareClient:
+        """Return firmware commands bound to one management point."""
+        return FirmwareClient(self, gateway_id, management_point_id)
 
     async def patch_characteristic(
         self,
