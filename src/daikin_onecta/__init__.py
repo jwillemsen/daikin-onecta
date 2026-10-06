@@ -18,6 +18,7 @@ from .firmware import FirmwareClient
 from .models import (
     ClimateControl,
     DomesticHotWater,
+    EnergyData,
     Firmware,
     GatewayDevice,
     ScheduleState,
@@ -30,6 +31,7 @@ __all__ = [
     "ClimateControl",
     "ClimateControlClient",
     "DomesticHotWater",
+    "EnergyData",
     "DomesticHotWaterClient",
     "FirmwareClient",
     "Firmware",

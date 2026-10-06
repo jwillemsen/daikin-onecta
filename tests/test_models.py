@@ -12,6 +12,7 @@ from daikin_onecta.models import (
     Characteristic,
     ClimateControl,
     DomesticHotWater,
+    EnergyData,
     Firmware,
     ManagementPoint,
     Schedule,
@@ -261,6 +262,23 @@ def test_platform_state_views() -> None:
     firmware = next(point.firmware for point in points if point.firmware)
     assert isinstance(firmware, Firmware)
     assert firmware.installed_version is not None
+
+
+def test_scalar_and_energy_views() -> None:
+    """Expose generic scalar and rolling energy values through typed helpers."""
+    point = next(
+        point
+        for device in load_devices("altherma.json")
+        for point in device.management_points
+        if point.consumption is not None
+    )
+
+    assert point.scalar_characteristic("operationMode") is point.operation_mode
+    assert point.scalar_characteristics() == point.simple_characteristics()
+    assert isinstance(point.consumption, EnergyData)
+    assert point.consumption.values("electrical", "heating", "day") is not None
+    assert point.consumption.current_total("electrical", "heating", "day") is not None
+    assert point.consumption.current_total("electrical", "heating", "month") is None
 
 
 def test_climate_control_view_handles_optional_data() -> None:

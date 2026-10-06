@@ -469,6 +469,14 @@ class ManagementPoint(OnectaModel):
                 result[name] = characteristic
         return result
 
+    def scalar_characteristics(self) -> dict[str, Characteristic[Any]]:
+        """Return every scalar characteristic suitable for generic discovery."""
+        return self.simple_characteristics()
+
+    def scalar_characteristic(self, name: str) -> Characteristic[Any] | None:
+        """Return one scalar characteristic by its Daikin API name."""
+        return self.scalar_characteristics().get(name)
+
     @property
     def model(self) -> str | None:
         """Return the management point's model identifier, when reported."""
@@ -527,6 +535,16 @@ class ManagementPoint(OnectaModel):
         ):
             return None
         return Firmware(self)
+
+    @property
+    def consumption(self) -> EnergyData | None:
+        """Return typed consumed-energy data when reported."""
+        return EnergyData(self.consumption_data.value) if self.consumption_data else None
+
+    @property
+    def energy_output(self) -> EnergyData | None:
+        """Return typed generated-energy data when reported."""
+        return EnergyData(self.output_data.value) if self.output_data else None
 
 
 @dataclass(frozen=True, slots=True)
@@ -633,6 +651,49 @@ class ClimateControl:
         if name == "holidayMode":
             return self.management_point.holiday_mode
         return self.management_point.characteristic(name)
+
+
+@dataclass(frozen=True, slots=True)
+class EnergyData:
+    """Read Daikin's rolling energy history without exposing API trees."""
+
+    data: ConsumptionData
+
+    def source(self, name: str) -> ConsumptionSource | None:
+        """Return an energy source such as electrical, gas, or thermal."""
+        return getattr(self.data, name, None)
+
+    def series(self, source: str, purpose: str) -> ConsumptionSeries | None:
+        """Return the rolling series for a source and purpose."""
+        energy_source = self.source(source)
+        return getattr(energy_source, purpose, None) if energy_source else None
+
+    def values(self, source: str, purpose: str, period: str) -> list[int | float | None] | None:
+        """Return raw day, week, or month values for an energy series."""
+        series = self.series(source, purpose)
+        return getattr(series, period, None) if series else None
+
+    def current_total(self, source: str, purpose: str, period: str, *, month: int | None = None) -> float | None:
+        """Return Daikin's current rolling total for a period.
+
+        Daily, weekly, and yearly arrays hold the previous period first and the
+        current period second. Monthly values require the caller's calendar
+        month because Daikin stores the current year's months in one array.
+        """
+        raw_period = "month" if period in {"month", "year"} else period
+        values = self.values(source, purpose, raw_period)
+        if values is None:
+            return None
+        normalized = [0 if value is None else value for value in values]
+        if period == "week":
+            values_to_sum = normalized[7:]
+        elif period == "month":
+            if month is None or not 1 <= month <= 12:
+                return None
+            values_to_sum = normalized[11 + month : 12 + month]
+        else:
+            values_to_sum = normalized[12:]
+        return round(sum(values_to_sum), 3)
 
 
 @dataclass(frozen=True, slots=True)
