@@ -491,6 +491,119 @@ class ManagementPoint(OnectaModel):
                 return characteristic.value
         return None
 
+    @property
+    def climate_control(self) -> ClimateControl | None:
+        """Return the typed climate-control view for this management point."""
+        if self.management_point_type != "climateControl":
+            return None
+        return ClimateControl(self)
+
+
+@dataclass(frozen=True, slots=True)
+class ClimateControl:
+    """Read typed climate-control state from a management point.
+
+    This view exposes Daikin's native capabilities. Consumers remain
+    responsible for mapping those values to their own domain models.
+    """
+
+    management_point: ManagementPoint
+
+    @property
+    def operation_mode(self) -> Characteristic[str] | None:
+        """Return the native operation-mode characteristic."""
+        return self.management_point.operation_mode
+
+    @property
+    def on_off_mode(self) -> Characteristic[str] | None:
+        """Return the power characteristic."""
+        return self.management_point.on_off_mode
+
+    @property
+    def native_operation_mode(self) -> str | None:
+        """Return the current native operation mode."""
+        operation_mode = self.operation_mode
+        return operation_mode.value if operation_mode is not None else None
+
+    @property
+    def native_operation_modes(self) -> list[str]:
+        """Return all advertised native operation modes, including the current mode."""
+        operation_mode = self.operation_mode
+        if operation_mode is None:
+            return []
+        modes = list(operation_mode.values or [])
+        if operation_mode.value not in modes:
+            modes.append(operation_mode.value)
+        return modes
+
+    def setpoint(self, target: str, operation_mode: str | None = None) -> Setpoint | None:
+        """Return a temperature target for a native operation mode."""
+        temperature_control = self.management_point.temperature_control
+        if temperature_control is None:
+            return None
+        mode = operation_mode or self.native_operation_mode
+        if mode is None:
+            return None
+        mode_setpoints = temperature_control.value.operation_modes.get(mode)
+        if mode_setpoints is None:
+            return None
+        return mode_setpoints.setpoints.get(target)
+
+    @property
+    def setpoint_types(self) -> list[str]:
+        """Return the distinct target names advertised across operation modes."""
+        temperature_control = self.management_point.temperature_control
+        if temperature_control is None:
+            return []
+        return list(
+            dict.fromkeys(
+                target for mode in temperature_control.value.operation_modes.values() for target in mode.setpoints
+            )
+        )
+
+    def sensory_data(self, target: str) -> Characteristic[int | float] | None:
+        """Return a sensory characteristic by its native target name."""
+        sensory_data = self.management_point.sensory_data
+        if sensory_data is None:
+            return None
+        attributes = {
+            "roomTemperature": "room_temperature",
+            "outdoorTemperature": "outdoor_temperature",
+            "leavingWaterTemperature": "leaving_water_temperature",
+            "tankTemperature": "tank_temperature",
+            "roomHumidity": "room_humidity",
+            "pm1Concentration": "pm1_concentration",
+            "pm25Concentration": "pm25_concentration",
+            "pm10Concentration": "pm10_concentration",
+        }
+        attribute = attributes.get(target)
+        return getattr(sensory_data.value, attribute) if attribute is not None else None
+
+    def current_temperature(self, target: str) -> int | float | None:
+        """Return the sensed temperature corresponding to a target.
+
+        ONECTA reports the current leaving-water temperature for the
+        ``leavingWaterOffset`` target rather than a separate offset sensor.
+        """
+        sensory_data = self.sensory_data(target)
+        if sensory_data is None and target == "leavingWaterOffset":
+            sensory_data = self.sensory_data("leavingWaterTemperature")
+        return sensory_data.value if sensory_data is not None else None
+
+    def fan_operation(self, operation_mode: str | None = None) -> FanOperationMode | None:
+        """Return fan controls for a native operation mode."""
+        fan_control = self.management_point.fan_control
+        mode = operation_mode or self.native_operation_mode
+        if fan_control is None or mode is None:
+            return None
+        return (fan_control.value.operation_modes or {}).get(mode)
+
+    def preset(self, name: str) -> Characteristic[Any] | None:
+        """Return a native preset characteristic by its API name."""
+        if name == "holidayMode":
+            return self.management_point.holiday_mode
+        return self.management_point.characteristic(name)
+
 
 @dataclass(slots=True)
 class GatewayDevice(OnectaModel):
