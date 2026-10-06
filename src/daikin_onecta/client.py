@@ -8,6 +8,7 @@ from typing import Any
 import aiohttp
 from mashumaro.exceptions import MissingField
 
+from .climate import ClimateControlClient
 from .exceptions import (
     OnectaApiError,
     OnectaAuthenticationError,
@@ -137,21 +138,18 @@ class OnectaClient:
     ) -> None:
         """Enable or disable holiday mode for a management point.
 
-        The ONECTA API requires both dates when enabling holiday mode and
-        rejects dates when disabling it.
+        This compatibility helper delegates to :meth:`climate_control`.
+        New callers should use the bound climate-control client.
         """
-        if enabled and (start_date is None or end_date is None):
-            raise ValueError("Holiday mode requires start_date and end_date when enabled")
-        if not enabled and (start_date is not None or end_date is not None):
-            raise ValueError("Holiday mode dates must not be sent when disabled")
+        await self.climate_control(gateway_id, management_point_id).set_holiday_mode(
+            enabled,
+            start_date=start_date,
+            end_date=end_date,
+        )
 
-        value: dict[str, str | bool] = {"enabled": enabled}
-        if enabled:
-            assert start_date is not None
-            assert end_date is not None
-            value["startDate"] = start_date.isoformat()
-            value["endDate"] = end_date.isoformat()
-        await self.post_management_point(gateway_id, management_point_id, "holiday-mode", value)
+    def climate_control(self, gateway_id: str, management_point_id: str) -> ClimateControlClient:
+        """Return commands bound to one climate-control management point."""
+        return ClimateControlClient(self, gateway_id, management_point_id)
 
     async def install_firmware(
         self,
