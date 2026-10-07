@@ -592,6 +592,13 @@ class ManagementPoint(OnectaModel):
         return ClimateControl(self)
 
     @property
+    def air_purification(self) -> AirPurification | None:
+        """Return the typed air-purification view when supported."""
+        if self.management_point_type != "climateControl" or self.characteristic("airPurificationMode") is None:
+            return None
+        return AirPurification(self)
+
+    @property
     def domestic_hot_water(self) -> DomesticHotWater | None:
         """Return the typed domestic-hot-water view for this management point."""
         if self.management_point_type not in {
@@ -745,6 +752,42 @@ class ClimateControl:
         if name == "holidayMode":
             return self.management_point.holiday_mode
         return self.management_point.characteristic(name)
+
+
+@dataclass(frozen=True, slots=True)
+class AirPurification:
+    """Read typed air-purification state from a management point."""
+
+    management_point: ManagementPoint
+
+    @property
+    def power(self) -> Characteristic[str] | None:
+        """Return the power characteristic."""
+        return self.management_point.on_off_mode
+
+    @property
+    def mode(self) -> Characteristic[str] | None:
+        """Return the native air-purification mode characteristic."""
+        return self.management_point.characteristic("airPurificationMode")
+
+    @property
+    def modes(self) -> list[str]:
+        """Return all advertised native air-purification modes."""
+        mode = self.mode
+        if mode is None:
+            return []
+        modes = list(mode.values or [])
+        if mode.value not in modes:
+            modes.append(mode.value)
+        return modes
+
+    def fan_operation(self, mode: str | None = None) -> FanOperationMode | None:
+        """Return fan controls for a native air-purification mode."""
+        fan_control = self.management_point.fan_control
+        active_mode = mode or (self.mode.value if self.mode is not None else None)
+        if fan_control is None or active_mode is None:
+            return None
+        return (fan_control.value.air_purification_modes or {}).get(active_mode)
 
 
 @dataclass(frozen=True, slots=True)

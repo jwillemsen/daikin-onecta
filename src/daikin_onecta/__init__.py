@@ -1,5 +1,6 @@
 """Async client for the Daikin Onecta cloud API."""
 
+from .air_purification import AirPurificationClient
 from .auth import get_account_id
 from .client import OnectaClient
 from .climate import ClimateControlClient
@@ -17,6 +18,7 @@ from .exceptions import (
 from .firmware import FirmwareClient
 from .management_point import ManagementPointClient
 from .models import (
+    AirPurification,
     ClimateControl,
     DomesticHotWater,
     EnergyAggregate,
@@ -35,6 +37,8 @@ from .schedule import ScheduleClient
 
 __all__ = [
     "GatewayDevice",
+    "AirPurification",
+    "AirPurificationClient",
     "ClimateControl",
     "ClimateControlClient",
     "DomesticHotWater",

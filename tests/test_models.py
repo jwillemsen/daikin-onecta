@@ -9,6 +9,7 @@ from syrupy.extensions.single_file import SingleFileAmberSnapshotExtension
 
 from daikin_onecta import GatewayDevice
 from daikin_onecta.models import (
+    AirPurification,
     Characteristic,
     ClimateControl,
     DomesticHotWater,
@@ -693,3 +694,51 @@ def test_gateway_display_name_falls_back_to_model() -> None:
     )
 
     assert device.display_name == "Daikin Model"
+
+
+def test_air_purification_view() -> None:
+    """Expose Daikin air-purification modes and their fan capabilities."""
+    point = load_devices("mc80z.json")[0].management_point("climateControl")
+
+    assert point is not None
+    purification = point.air_purification
+    assert purification is not None
+    assert purification.power is not None
+    assert purification.power.value == "on"
+    assert purification.mode is not None
+    assert purification.mode.value == "econo"
+    assert purification.modes == [
+        "manualFan",
+        "autoFan",
+        "econo",
+        "antiPollen",
+        "circulator",
+        "auto",
+        "moist",
+    ]
+    manual_fan = purification.fan_operation("manualFan")
+    assert manual_fan is not None
+    assert manual_fan.fan_speed is not None
+    assert manual_fan.fan_speed.modes is not None
+    assert manual_fan.fan_speed.modes["fixed"].max_value == 4
+    assert purification.fan_operation() is not None
+
+
+def test_air_purification_view_without_optional_capabilities() -> None:
+    """Keep unsupported purifier state and fan controls absent."""
+    point = ManagementPoint.from_dict(
+        {
+            "embeddedId": "climateControl",
+            "managementPointType": "climateControl",
+            "airPurificationMode": {"value": "manualFan"},
+        }
+    )
+
+    purification = point.air_purification
+    assert purification is not None
+    assert purification.modes == ["manualFan"]
+    assert purification.fan_operation() is None
+
+    unsupported = load_devices("homehub.json")[0].management_points[0]
+    assert unsupported.air_purification is None
+    assert AirPurification(unsupported).modes == []
