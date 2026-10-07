@@ -196,6 +196,20 @@ class SensoryData(OnectaModel):
             "pm10_concentration": "pm10Concentration",
         }
 
+    def characteristic(self, name: str) -> Characteristic[int | float] | None:
+        """Return one sensory characteristic by its Daikin API name."""
+        attributes = {
+            "roomTemperature": self.room_temperature,
+            "outdoorTemperature": self.outdoor_temperature,
+            "leavingWaterTemperature": self.leaving_water_temperature,
+            "tankTemperature": self.tank_temperature,
+            "roomHumidity": self.room_humidity,
+            "pm1Concentration": self.pm1_concentration,
+            "pm25Concentration": self.pm25_concentration,
+            "pm10Concentration": self.pm10_concentration,
+        }
+        return attributes.get(name)
+
 
 @dataclass(slots=True)
 class FanSpeedMode(OnectaModel):
@@ -476,6 +490,11 @@ class ManagementPoint(OnectaModel):
     def scalar_characteristic(self, name: str) -> Characteristic[Any] | None:
         """Return one scalar characteristic by its Daikin API name."""
         return self.scalar_characteristics().get(name)
+
+    def sensory_characteristic(self, name: str) -> Characteristic[int | float] | None:
+        """Return one sensory characteristic by its Daikin API name."""
+        sensory_data = self.sensory_data
+        return sensory_data.value.characteristic(name) if sensory_data is not None else None
 
     @property
     def model(self) -> str | None:
@@ -764,6 +783,11 @@ class Firmware:
         return installed.value if installed is not None else None
 
     @property
+    def has_installed_version(self) -> bool:
+        """Return whether the management point reports installed firmware."""
+        return self.installed_version is not None
+
+    @property
     def update_supported(self) -> bool:
         """Return whether the cloud allows firmware installation."""
         supported = self.management_point.is_firmware_update_supported
@@ -787,6 +811,11 @@ class Firmware:
         """Return whether a firmware installation is in progress."""
         status = self.management_point.firmware_update_status
         return status is not None and status.value == "in-progress"
+
+    @property
+    def has_update_status(self) -> bool:
+        """Return whether the cloud reports firmware-update status."""
+        return self.management_point.firmware_update_status is not None
 
 
 @dataclass(slots=True)

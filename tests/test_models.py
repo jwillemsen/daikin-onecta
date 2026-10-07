@@ -190,6 +190,25 @@ def test_sensory_data_model(snapshot: SnapshotAssertion) -> None:
     assert sensory.value.to_dict() == snapshot(extension_class=SingleFileAmberSnapshotExtension)
 
 
+def test_sensory_characteristic_lookup() -> None:
+    """Look up known sensory values without exposing model attribute names."""
+    point = next(
+        point
+        for device in load_devices("mc80z.json")
+        for point in device.management_points
+        if point.sensory_data is not None
+    )
+
+    assert point.sensory_characteristic("roomTemperature") is point.sensory_data.value.room_temperature
+    assert point.sensory_characteristic("missing") is None
+    assert (
+        ManagementPoint(embedded_id="gateway", management_point_type="gateway").sensory_characteristic(
+            "roomTemperature"
+        )
+        is None
+    )
+
+
 def test_fan_control_model(snapshot: SnapshotAssertion) -> None:
     """Deserialize fan speed and direction controls by operation mode."""
     device = load_devices("climate_floorheatingairflow.json")[0]
@@ -361,6 +380,18 @@ def test_firmware_view_handles_optional_update_data() -> None:
     assert firmware.offered_update == {"id": 42}
     assert firmware.firmware_id is None
     assert firmware.in_progress is True
+    assert firmware.has_installed_version is False
+    assert firmware.has_update_status is True
+
+    installed = Firmware(
+        ManagementPoint(
+            embedded_id="gateway",
+            management_point_type="gateway",
+            firmware_version=Characteristic(value="1.2.3"),
+        )
+    )
+    assert installed.has_installed_version is True
+    assert installed.has_update_status is False
 
 
 def test_climate_control_view_handles_optional_data() -> None:
