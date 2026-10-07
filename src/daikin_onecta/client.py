@@ -19,6 +19,7 @@ from .exceptions import (
     OnectaResponseError,
 )
 from .firmware import FirmwareClient
+from .management_point import ManagementPointClient
 from .models import GatewayDevice
 from .rate_limit import RateLimit
 from .schedule import ScheduleClient
@@ -156,6 +157,10 @@ class OnectaClient:
     def climate_control(self, gateway_id: str, management_point_id: str) -> ClimateControlClient:
         """Return commands bound to one climate-control management point."""
         return ClimateControlClient(self, gateway_id, management_point_id)
+
+    def management_point(self, gateway_id: str, management_point_id: str) -> ManagementPointClient:
+        """Return generic commands bound to one management point."""
+        return ManagementPointClient(self, gateway_id, management_point_id)
 
     def domestic_hot_water(self, gateway_id: str, management_point_id: str) -> DomesticHotWaterClient:
         """Return commands bound to one domestic-hot-water management point."""

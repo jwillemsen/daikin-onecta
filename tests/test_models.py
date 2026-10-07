@@ -12,8 +12,10 @@ from daikin_onecta.models import (
     Characteristic,
     ClimateControl,
     DomesticHotWater,
+    EnergyAggregate,
     EnergyData,
     Firmware,
+    FirmwareOffer,
     ManagementPoint,
     Schedule,
     ScheduleDefinition,
@@ -355,6 +357,15 @@ def test_scalar_and_energy_views() -> None:
     assert point.consumption.values("electrical", "heating", "day") is not None
     assert point.consumption.current_total("electrical", "heating", "day") is not None
     assert point.consumption.current_total("electrical", "heating", "month") is None
+    aggregates = point.energy_aggregates
+    assert all(isinstance(aggregate, EnergyAggregate) for aggregate in aggregates)
+    assert any(
+        aggregate.data_type == "consumption"
+        and aggregate.source == "electrical"
+        and aggregate.operation_mode == "heating"
+        and aggregate.period == "day"
+        for aggregate in aggregates
+    )
 
 
 def test_platform_state_views_handle_absent_data() -> None:
@@ -419,6 +430,14 @@ def test_energy_data_views_handle_unknown_and_rolling_values() -> None:
     assert energy.current_total("electrical", "heating", "week") == 2.5
     assert energy.current_total("electrical", "heating", "month", month=0) is None
     assert energy.current_total("electrical", "heating", "month", month=1) == 3.75
+    aggregates = energy.aggregates("consumption")
+    assert {(aggregate.operation_mode, aggregate.period) for aggregate in aggregates} == {
+        ("heating", "day"),
+        ("heating", "week"),
+        ("heating", "month"),
+        ("heating", "year"),
+    }
+    assert next(aggregate for aggregate in aggregates if aggregate.period == "year").current_total() == 3.75
 
 
 def test_firmware_view_handles_optional_update_data() -> None:
@@ -434,7 +453,7 @@ def test_firmware_view_handles_optional_update_data() -> None:
     )
 
     assert firmware.update_supported is True
-    assert firmware.offered_update == {"id": 42}
+    assert firmware.offered_update == FirmwareOffer(None, None, None, None)
     assert firmware.firmware_id is None
     assert firmware.in_progress is True
     assert firmware.has_installed_version is False
@@ -449,6 +468,21 @@ def test_firmware_view_handles_optional_update_data() -> None:
     )
     assert installed.has_installed_version is True
     assert installed.has_update_status is False
+
+
+def test_firmware_offer_is_typed() -> None:
+    """Convert optional firmware-offer metadata to a typed value."""
+    offer = FirmwareOffer.from_data(
+        {
+            "id": "firmware-id",
+            "version": "2.0",
+            "description": "Important update",
+            "type": "blocking",
+        }
+    )
+
+    assert offer == FirmwareOffer("firmware-id", "2.0", "Important update", "blocking")
+    assert FirmwareOffer.from_data("invalid") is None
 
 
 def test_climate_control_view_handles_optional_data() -> None:

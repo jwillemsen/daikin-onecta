@@ -1,5 +1,7 @@
 """Models returned by the Daikin Onecta API."""
 
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -629,6 +631,15 @@ class ManagementPoint(OnectaModel):
         """Return typed generated-energy data when reported."""
         return EnergyData(self.output_data.value) if self.output_data else None
 
+    @property
+    def energy_aggregates(self) -> list[EnergyAggregate]:
+        """Return every energy aggregate reported by this management point."""
+        result: list[EnergyAggregate] = []
+        for data_type, energy_data in (("consumption", self.consumption), ("output", self.energy_output)):
+            if energy_data is not None:
+                result.extend(energy_data.aggregates(data_type))
+        return result
+
 
 @dataclass(frozen=True, slots=True)
 class ClimateControl:
@@ -742,6 +753,19 @@ class EnergyData:
 
     data: ConsumptionData
 
+    def aggregates(self, data_type: str) -> list[EnergyAggregate]:
+        """Return every energy aggregate available from this energy data."""
+        result: list[EnergyAggregate] = []
+        for source in ("electrical", "gas", "thermal"):
+            for operation_mode in ("heating", "cooling"):
+                for period in ("day", "week", "month"):
+                    if self.values(source, operation_mode, period) is None:
+                        continue
+                    result.append(EnergyAggregate(self, data_type, source, operation_mode, period))
+                    if period == "month":
+                        result.append(EnergyAggregate(self, data_type, source, operation_mode, "year"))
+        return result
+
     def source(self, name: str) -> ConsumptionSource | None:
         """Return an energy source such as electrical, gas, or thermal."""
         return getattr(self.data, name, None)
@@ -777,6 +801,26 @@ class EnergyData:
         else:
             values_to_sum = normalized[12:]
         return round(sum(values_to_sum), 3)
+
+
+@dataclass(frozen=True, slots=True)
+class EnergyAggregate:
+    """One available energy aggregate from a management point."""
+
+    _energy_data: EnergyData
+    data_type: str
+    source: str
+    operation_mode: str
+    period: str
+
+    def current_total(self, *, month: int | None = None) -> float | None:
+        """Return this aggregate's current total."""
+        return self._energy_data.current_total(
+            self.source,
+            self.operation_mode,
+            self.period,
+            month=month,
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -863,17 +907,16 @@ class Firmware:
         return bool(supported.value) if supported is not None else False
 
     @property
-    def offered_update(self) -> dict[str, Any] | None:
-        """Return the optional offered firmware metadata."""
+    def offered_update(self) -> FirmwareOffer | None:
+        """Return typed metadata for the optional offered firmware."""
         update = self.management_point.firmware_update
-        return update.value if update is not None else None
+        return FirmwareOffer.from_data(update.value) if update is not None else None
 
     @property
     def firmware_id(self) -> str | None:
         """Return the install target ID for the offered update."""
         update = self.offered_update
-        firmware_id = update.get("id") if update is not None else None
-        return firmware_id if isinstance(firmware_id, str) else None
+        return update.firmware_id if update is not None else None
 
     @property
     def in_progress(self) -> bool:
@@ -885,6 +928,28 @@ class Firmware:
     def has_update_status(self) -> bool:
         """Return whether the cloud reports firmware-update status."""
         return self.management_point.firmware_update_status is not None
+
+
+@dataclass(frozen=True, slots=True)
+class FirmwareOffer:
+    """Metadata for firmware offered by the Daikin cloud."""
+
+    firmware_id: str | None
+    version: str | None
+    description: str | None
+    update_type: str | None
+
+    @classmethod
+    def from_data(cls, data: Any) -> FirmwareOffer | None:
+        """Build an offer from optional, partially typed cloud metadata."""
+        if not isinstance(data, dict):
+            return None
+        return cls(
+            firmware_id=data.get("id") if isinstance(data.get("id"), str) else None,
+            version=data.get("version") if isinstance(data.get("version"), str) else None,
+            description=data.get("description") if isinstance(data.get("description"), str) else None,
+            update_type=data.get("type") if isinstance(data.get("type"), str) else None,
+        )
 
 
 @dataclass(slots=True)

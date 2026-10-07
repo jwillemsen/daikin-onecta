@@ -15,11 +15,14 @@ from .exceptions import (
     OnectaResponseError,
 )
 from .firmware import FirmwareClient
+from .management_point import ManagementPointClient
 from .models import (
     ClimateControl,
     DomesticHotWater,
+    EnergyAggregate,
     EnergyData,
     Firmware,
+    FirmwareOffer,
     GatewayDevice,
     Schedule,
     ScheduleDefinition,
@@ -36,9 +39,12 @@ __all__ = [
     "ClimateControlClient",
     "DomesticHotWater",
     "EnergyData",
+    "EnergyAggregate",
     "DomesticHotWaterClient",
     "FirmwareClient",
     "Firmware",
+    "FirmwareOffer",
+    "ManagementPointClient",
     "OnectaAccessTokenError",
     "OnectaApiError",
     "OnectaAuthenticationError",
