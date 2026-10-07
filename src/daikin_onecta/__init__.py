@@ -21,6 +21,10 @@ from .models import (
     EnergyData,
     Firmware,
     GatewayDevice,
+    Schedule,
+    ScheduleDefinition,
+    ScheduleMode,
+    ScheduleSelection,
     ScheduleState,
 )
 from .rate_limit import RateLimit
@@ -45,7 +49,11 @@ __all__ = [
     "OnectaRequestError",
     "OnectaResponseError",
     "RateLimit",
+    "Schedule",
     "ScheduleClient",
+    "ScheduleDefinition",
+    "ScheduleMode",
+    "ScheduleSelection",
     "ScheduleState",
     "get_account_id",
 ]

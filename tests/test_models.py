@@ -16,6 +16,8 @@ from daikin_onecta.models import (
     Firmware,
     ManagementPoint,
     Schedule,
+    ScheduleDefinition,
+    ScheduleMode,
     ScheduleOption,
     ScheduleSelection,
     ScheduleState,
@@ -142,19 +144,46 @@ def test_schedule_selection_current_option() -> None:
     assert missing.current_option == "1"
 
 
+def test_schedule_tree_and_cache_update() -> None:
+    """Expose a typed schedule tree and update it after a successful command."""
+    point = next(
+        point
+        for device in load_devices("altherma.json")
+        for point in device.management_points
+        if point.schedule is not None
+    )
+    schedule = point.schedule
+    assert schedule is not None
+
+    heating = schedule.value.modes["heating"]
+    assert isinstance(heating, ScheduleMode)
+    assert heating.current_schedule is not None
+    assert heating.enabled is not None
+    definition = heating.schedules["scheduleHeatingRT1"]
+    assert isinstance(definition, ScheduleDefinition)
+
+    state = point.schedule_state
+    assert state.apply_selection("heating", "scheduleHeatingRT2", enabled=False)
+    assert heating.current_schedule.value == "scheduleHeatingRT2"
+    assert heating.enabled.value is False
+    assert not state.apply_selection("missing", "scheduleHeatingRT1", enabled=True)
+
+
 def test_schedule_selections_ignore_invalid_data() -> None:
     """Ignore malformed schedule modes and invalid schedule identifiers."""
-    schedule = Schedule(
-        modes={
-            "missing": {},
-            "invalid-current": {"currentSchedule": "invalid"},
-            "invalid-selected": {"currentSchedule": {"value": 0, "values": ["0"]}},
-            "invalid-values": {"currentSchedule": {"value": "0", "values": "invalid"}},
-            "valid": {
-                "currentSchedule": {"value": "0", "values": ["0", 1]},
-                "enabled": {"value": True, "settable": True},
-                "schedules": {"0": {"name": {"value": "Weekday"}}},
-            },
+    schedule = Schedule.from_dict(
+        {
+            "modes": {
+                "missing": {},
+                "invalid-current": {"currentSchedule": "invalid"},
+                "invalid-selected": {"currentSchedule": {"value": 0, "values": ["0"]}},
+                "invalid-values": {"currentSchedule": {"value": "0", "values": "invalid"}},
+                "valid": {
+                    "currentSchedule": {"value": "0", "values": ["0", 1]},
+                    "enabled": {"value": True, "settable": True},
+                    "schedules": {"0": {"name": {"value": "Weekday"}}},
+                },
+            }
         }
     )
 
@@ -163,6 +192,34 @@ def test_schedule_selections_ignore_invalid_data() -> None:
     assert len(selections) == 1
     assert selections[0].mode == "valid"
     assert selections[0].options == [ScheduleOption(id="0", name="Weekday")]
+
+
+def test_schedule_tree_ignores_non_mapping_and_incomplete_data() -> None:
+    """Ignore malformed optional data while preserving valid schedule selections."""
+    assert Schedule.from_dict({"modes": None}).modes == {}
+
+    schedule = Schedule.from_dict(
+        {
+            "modes": {
+                1: {"currentSchedule": {"value": "0", "values": []}},
+                "valid": {
+                    "currentSchedule": {"value": "0", "values": []},
+                    "schedules": {1: {}, "valid": {"name": {"value": "Weekday"}}},
+                },
+            }
+        }
+    )
+    schedule.modes["empty"] = ScheduleMode()
+
+    assert schedule.selections == [
+        ScheduleSelection(
+            mode="valid",
+            selected="0",
+            options=[],
+            enabled=False,
+            enabled_settable=False,
+        )
+    ]
 
 
 def test_holiday_mode(snapshot: SnapshotAssertion) -> None:

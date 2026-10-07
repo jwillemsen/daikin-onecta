@@ -92,6 +92,28 @@ class ScheduleOption(OnectaModel):
 
 
 @dataclass(slots=True)
+class ScheduleDefinition(OnectaModel):
+    """One named schedule available for a schedule mode."""
+
+    name: Characteristic[str] | None = None
+    settable: bool = False
+
+
+@dataclass(slots=True)
+class ScheduleMode(OnectaModel):
+    """Schedule selection and definitions for one Daikin operation mode."""
+
+    current_schedule: Characteristic[str] | None = None
+    enabled: Characteristic[bool] | None = None
+    schedules: dict[str, ScheduleDefinition] = field(default_factory=dict)
+
+    class Config(OnectaModel.Config):
+        """Mashumaro configuration."""
+
+        aliases = {"current_schedule": "currentSchedule"}
+
+
+@dataclass(slots=True)
 class ScheduleSelection(OnectaModel):
     """Schedule selection state for one Daikin schedule mode."""
 
@@ -114,45 +136,87 @@ class Schedule(OnectaModel):
     """Schedule data used to select a configured schedule."""
 
     current_mode: Characteristic[str] | None = None
-    modes: dict[str, dict[str, Any]] | None = None
+    modes: dict[str, ScheduleMode] = field(default_factory=dict)
 
     class Config(OnectaModel.Config):
         """Mashumaro configuration."""
 
         aliases = {"current_mode": "currentMode"}
 
-    @property
-    def selections(self) -> list[ScheduleSelection]:
-        """Return selectable schedules without exposing schedule actions."""
-        result: list[ScheduleSelection] = []
-        for mode, mode_data in (self.modes or {}).items():
+    @classmethod
+    def __pre_deserialize__(cls, data: dict[str, Any]) -> dict[str, Any]:
+        """Ignore malformed optional schedule modes from cloud responses."""
+        data = dict(data)
+        modes = data.get("modes")
+        if not isinstance(modes, dict):
+            data["modes"] = {}
+            return data
+
+        valid_modes: dict[str, dict[str, Any]] = {}
+        for mode_name, mode_data in modes.items():
+            if not isinstance(mode_name, str) or not isinstance(mode_data, dict):
+                continue
             current = mode_data.get("currentSchedule")
             if not isinstance(current, dict):
                 continue
             selected = current.get("value")
             available = current.get("values")
-            enabled = mode_data.get("enabled", {})
-            schedules = mode_data.get("schedules", {})
             if not isinstance(selected, str) or not isinstance(available, list):
                 continue
+
+            current = dict(current)
+            current["values"] = [schedule_id for schedule_id in available if isinstance(schedule_id, str)]
+            mode = {"currentSchedule": current}
+            if isinstance(enabled := mode_data.get("enabled"), dict) and isinstance(enabled.get("value"), bool):
+                mode["enabled"] = enabled
+            if isinstance(schedules := mode_data.get("schedules"), dict):
+                typed_schedules: dict[str, dict[str, Any]] = {}
+                for schedule_id, schedule_data in schedules.items():
+                    if not isinstance(schedule_id, str) or not isinstance(schedule_data, dict):
+                        continue
+                    schedule: dict[str, Any] = {"settable": bool(schedule_data.get("settable", False))}
+                    schedule_name = schedule_data.get("name")
+                    if isinstance(schedule_name, dict) and isinstance(schedule_name.get("value"), str):
+                        schedule["name"] = schedule_name
+                    typed_schedules[schedule_id] = schedule
+                mode["schedules"] = typed_schedules
+            valid_modes[mode_name] = mode
+        data["modes"] = valid_modes
+        return data
+
+    @property
+    def selections(self) -> list[ScheduleSelection]:
+        """Return selectable schedules without exposing schedule actions."""
+        result: list[ScheduleSelection] = []
+        for mode, mode_data in self.modes.items():
+            current = mode_data.current_schedule
+            if current is None:
+                continue
             options: list[ScheduleOption] = []
-            for schedule_id in available:
-                if not isinstance(schedule_id, str):
-                    continue
-                schedule_data = schedules.get(schedule_id, {})
-                name_data = schedule_data.get("name", {})
-                name = name_data.get("value") if isinstance(name_data, dict) else None
+            for schedule_id in current.values or []:
+                schedule_data = mode_data.schedules.get(schedule_id)
+                name = schedule_data.name.value if schedule_data and schedule_data.name else None
                 options.append(ScheduleOption(id=schedule_id, name=name or schedule_id))
             result.append(
                 ScheduleSelection(
                     mode=mode,
-                    selected=selected,
+                    selected=current.value,
                     options=options,
-                    enabled=bool(enabled.get("value", False)),
-                    enabled_settable=bool(enabled.get("settable", False)),
+                    enabled=mode_data.enabled.value if mode_data.enabled is not None else False,
+                    enabled_settable=mode_data.enabled.settable if mode_data.enabled is not None else False,
                 )
             )
         return result
+
+    def apply_selection(self, mode: str, schedule_id: str, *, enabled: bool) -> bool:
+        """Apply a successful schedule-selection command to the local model."""
+        schedule_mode = self.modes.get(mode)
+        if schedule_mode is None or schedule_mode.current_schedule is None:
+            return False
+        schedule_mode.current_schedule.value = schedule_id
+        if schedule_mode.enabled is not None:
+            schedule_mode.enabled.value = enabled
+        return True
 
 
 @dataclass(slots=True)
@@ -768,6 +832,11 @@ class ScheduleState:
             return None
         mode = schedule.value.current_mode.value
         return next((item for item in self.selections if item.mode == mode), None)
+
+    def apply_selection(self, mode: str, schedule_id: str, *, enabled: bool) -> bool:
+        """Apply a successful schedule-selection command to the local state."""
+        schedule = self.management_point.schedule
+        return schedule.value.apply_selection(mode, schedule_id, enabled=enabled) if schedule is not None else False
 
 
 @dataclass(frozen=True, slots=True)
