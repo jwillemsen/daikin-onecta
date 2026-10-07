@@ -662,14 +662,14 @@ class ClimateControl:
         return self.management_point.on_off_mode
 
     @property
-    def native_operation_mode(self) -> str | None:
-        """Return the current native operation mode."""
+    def current_operation_mode(self) -> str | None:
+        """Return the current Daikin operation-mode value."""
         operation_mode = self.operation_mode
         return operation_mode.value if operation_mode is not None else None
 
     @property
-    def native_operation_modes(self) -> list[str]:
-        """Return all advertised native operation modes, including the current mode."""
+    def operation_modes(self) -> list[str]:
+        """Return all advertised Daikin operation modes, including the current mode."""
         operation_mode = self.operation_mode
         if operation_mode is None:
             return []
@@ -683,7 +683,7 @@ class ClimateControl:
         temperature_control = self.management_point.temperature_control
         if temperature_control is None:
             return None
-        mode = operation_mode or self.native_operation_mode
+        mode = operation_mode or self.current_operation_mode
         if mode is None:
             return None
         mode_setpoints = temperature_control.value.operation_modes.get(mode)
@@ -704,7 +704,7 @@ class ClimateControl:
         )
 
     def sensory_data(self, target: str) -> Characteristic[int | float] | None:
-        """Return a sensory characteristic by its native target name."""
+        """Return a sensory characteristic by its Daikin target name."""
         sensory_data = self.management_point.sensory_data
         if sensory_data is None:
             return None
@@ -735,13 +735,13 @@ class ClimateControl:
     def fan_operation(self, operation_mode: str | None = None) -> FanOperationMode | None:
         """Return fan controls for a native operation mode."""
         fan_control = self.management_point.fan_control
-        mode = operation_mode or self.native_operation_mode
+        mode = operation_mode or self.current_operation_mode
         if fan_control is None or mode is None:
             return None
         return (fan_control.value.operation_modes or {}).get(mode)
 
-    def preset(self, name: str) -> Characteristic[Any] | None:
-        """Return a native preset characteristic by its API name."""
+    def mode_characteristic(self, name: str) -> Characteristic[Any] | HolidayMode | None:
+        """Return a named Daikin mode characteristic by its API name."""
         if name == "holidayMode":
             return self.management_point.holiday_mode
         return self.management_point.characteristic(name)

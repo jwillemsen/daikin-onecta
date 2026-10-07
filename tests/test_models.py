@@ -307,8 +307,8 @@ def test_climate_control_view() -> None:
     assert climate.management_point is point
     assert climate.operation_mode is point.operation_mode
     assert climate.on_off_mode is point.on_off_mode
-    assert climate.native_operation_mode == point.operation_mode.value
-    assert climate.native_operation_modes == point.operation_mode.values
+    assert climate.current_operation_mode == point.operation_mode.value
+    assert climate.operation_modes == point.operation_mode.values
     assert climate.setpoint_types == ["roomTemperature"]
     setpoint = climate.setpoint("roomTemperature")
     assert setpoint is not None
@@ -319,8 +319,8 @@ def test_climate_control_view() -> None:
     assert climate.sensory_data("missing") is None
     assert climate.fan_operation() is not None
     assert climate.fan_operation("missing") is None
-    assert climate.preset("powerfulMode") is point.characteristic("powerfulMode")
-    assert climate.preset("holidayMode") is point.holiday_mode
+    assert climate.mode_characteristic("powerfulMode") is point.characteristic("powerfulMode")
+    assert climate.mode_characteristic("holidayMode") is point.holiday_mode
 
 
 def test_platform_state_views() -> None:
@@ -527,8 +527,8 @@ def test_climate_control_view_handles_optional_data() -> None:
     assert climate is not None
     assert climate.operation_mode is climate_point.operation_mode
     assert climate.on_off_mode is None
-    assert climate.native_operation_mode == "cooling"
-    assert climate.native_operation_modes == ["cooling"]
+    assert climate.current_operation_mode == "cooling"
+    assert climate.operation_modes == ["cooling"]
     assert climate.setpoint_types == ["leavingWaterOffset"]
     assert climate.setpoint("roomTemperature") is None
     assert climate.setpoint("leavingWaterOffset") is not None
@@ -536,14 +536,14 @@ def test_climate_control_view_handles_optional_data() -> None:
     assert climate.current_temperature("roomTemperature") is None
     assert climate.current_temperature("leavingWaterOffset") == 31.5
     assert climate.fan_operation() is None
-    assert climate.preset("powerfulMode") is None
+    assert climate.mode_characteristic("powerfulMode") is None
 
     empty = ManagementPoint(
         embedded_id="emptyClimateControl",
         management_point_type="climateControl",
     ).climate_control
     assert empty is not None
-    assert empty.native_operation_modes == []
+    assert empty.operation_modes == []
     assert empty.setpoint("roomTemperature") is None
     assert empty.setpoint_types == []
     assert empty.sensory_data("roomTemperature") is None

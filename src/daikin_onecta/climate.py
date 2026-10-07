@@ -78,9 +78,9 @@ class ClimateControlClient:
             path=(f"/operationModes/{operation_mode}/fanDirection/{direction}/currentMode"),
         )
 
-    async def set_preset_mode(self, preset: str, enabled: bool) -> None:
-        """Enable or disable a native Daikin preset characteristic."""
-        await self._patch(preset, "on" if enabled else "off")
+    async def set_mode_characteristic(self, characteristic: str, enabled: bool) -> None:
+        """Set a named Daikin on/off mode characteristic."""
+        await self._patch(characteristic, "on" if enabled else "off")
 
     async def set_holiday_mode(
         self,

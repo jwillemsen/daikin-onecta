@@ -27,8 +27,8 @@ def climate_control(client: AsyncMock) -> ClimateControlClient:
         ("set_power", (True,), "onOffMode", "on"),
         ("set_power", (False,), "onOffMode", "off"),
         ("set_operation_mode", ("heating",), "operationMode", "heating"),
-        ("set_preset_mode", ("econoMode", True), "econoMode", "on"),
-        ("set_preset_mode", ("econoMode", False), "econoMode", "off"),
+        ("set_mode_characteristic", ("econoMode", True), "econoMode", "on"),
+        ("set_mode_characteristic", ("econoMode", False), "econoMode", "off"),
     ],
 )
 async def test_climate_control_simple_commands(
