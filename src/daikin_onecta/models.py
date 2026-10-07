@@ -469,6 +469,14 @@ class ManagementPoint(OnectaModel):
                 result[name] = characteristic
         return result
 
+    def scalar_characteristics(self) -> dict[str, Characteristic[Any]]:
+        """Return every scalar characteristic suitable for generic discovery."""
+        return self.simple_characteristics()
+
+    def scalar_characteristic(self, name: str) -> Characteristic[Any] | None:
+        """Return one scalar characteristic by its Daikin API name."""
+        return self.scalar_characteristics().get(name)
+
     @property
     def model(self) -> str | None:
         """Return the management point's model identifier, when reported."""
@@ -497,6 +505,46 @@ class ManagementPoint(OnectaModel):
         if self.management_point_type != "climateControl":
             return None
         return ClimateControl(self)
+
+    @property
+    def domestic_hot_water(self) -> DomesticHotWater | None:
+        """Return the typed domestic-hot-water view for this management point."""
+        if self.management_point_type not in {
+            "domesticHotWaterTank",
+            "domesticHotWaterFlowThrough",
+        }:
+            return None
+        return DomesticHotWater(self)
+
+    @property
+    def schedule_state(self) -> ScheduleState | None:
+        """Return the typed schedule state when the point exposes schedules."""
+        return ScheduleState(self) if self.schedule is not None else None
+
+    @property
+    def firmware(self) -> Firmware | None:
+        """Return typed firmware state when the point exposes firmware data."""
+        if not any(
+            (
+                self.firmware_version,
+                self.software_version,
+                self.is_firmware_update_supported,
+                self.firmware_update,
+                self.firmware_update_status,
+            )
+        ):
+            return None
+        return Firmware(self)
+
+    @property
+    def consumption(self) -> EnergyData | None:
+        """Return typed consumed-energy data when reported."""
+        return EnergyData(self.consumption_data.value) if self.consumption_data else None
+
+    @property
+    def energy_output(self) -> EnergyData | None:
+        """Return typed generated-energy data when reported."""
+        return EnergyData(self.output_data.value) if self.output_data else None
 
 
 @dataclass(frozen=True, slots=True)
@@ -603,6 +651,142 @@ class ClimateControl:
         if name == "holidayMode":
             return self.management_point.holiday_mode
         return self.management_point.characteristic(name)
+
+
+@dataclass(frozen=True, slots=True)
+class EnergyData:
+    """Read Daikin's rolling energy history without exposing API trees."""
+
+    data: ConsumptionData
+
+    def source(self, name: str) -> ConsumptionSource | None:
+        """Return an energy source such as electrical, gas, or thermal."""
+        return getattr(self.data, name, None)
+
+    def series(self, source: str, purpose: str) -> ConsumptionSeries | None:
+        """Return the rolling series for a source and purpose."""
+        energy_source = self.source(source)
+        return getattr(energy_source, purpose, None) if energy_source else None
+
+    def values(self, source: str, purpose: str, period: str) -> list[int | float | None] | None:
+        """Return raw day, week, or month values for an energy series."""
+        series = self.series(source, purpose)
+        return getattr(series, period, None) if series else None
+
+    def current_total(self, source: str, purpose: str, period: str, *, month: int | None = None) -> float | None:
+        """Return Daikin's current rolling total for a period.
+
+        Daily, weekly, and yearly arrays hold the previous period first and the
+        current period second. Monthly values require the caller's calendar
+        month because Daikin stores the current year's months in one array.
+        """
+        raw_period = "month" if period in {"month", "year"} else period
+        values = self.values(source, purpose, raw_period)
+        if values is None:
+            return None
+        normalized = [0 if value is None else value for value in values]
+        if period == "week":
+            values_to_sum = normalized[7:]
+        elif period == "month":
+            if month is None or not 1 <= month <= 12:
+                return None
+            values_to_sum = normalized[11 + month : 12 + month]
+        else:
+            values_to_sum = normalized[12:]
+        return round(sum(values_to_sum), 3)
+
+
+@dataclass(frozen=True, slots=True)
+class DomesticHotWater:
+    """Read typed domestic-hot-water state from a management point."""
+
+    management_point: ManagementPoint
+
+    @property
+    def power(self) -> Characteristic[str] | None:
+        """Return the on/off characteristic."""
+        return self.management_point.on_off_mode
+
+    @property
+    def powerful_mode(self) -> Characteristic[Any] | None:
+        """Return the optional powerful-mode characteristic."""
+        return self.management_point.characteristic("powerfulMode")
+
+    @property
+    def temperature(self) -> Setpoint | None:
+        """Return the domestic-hot-water heating target."""
+        control = self.management_point.temperature_control
+        if control is None:
+            return None
+        heating = control.value.operation_modes.get("heating")
+        return heating.setpoints.get("domesticHotWaterTemperature") if heating is not None else None
+
+    @property
+    def current_temperature(self) -> int | float | None:
+        """Return the tank temperature when it is reported."""
+        sensory = self.management_point.sensory_data
+        tank = sensory.value.tank_temperature if sensory is not None else None
+        return tank.value if tank is not None else None
+
+
+@dataclass(frozen=True, slots=True)
+class ScheduleState:
+    """Read typed schedule state from a management point."""
+
+    management_point: ManagementPoint
+
+    @property
+    def selections(self) -> list[ScheduleSelection]:
+        """Return all configured schedule selections."""
+        schedule = self.management_point.schedule
+        return schedule.value.selections if schedule is not None else []
+
+    @property
+    def active_selection(self) -> ScheduleSelection | None:
+        """Return the selection for the active schedule mode."""
+        schedule = self.management_point.schedule
+        if schedule is None or schedule.value.current_mode is None:
+            return None
+        mode = schedule.value.current_mode.value
+        return next((item for item in self.selections if item.mode == mode), None)
+
+
+@dataclass(frozen=True, slots=True)
+class Firmware:
+    """Read typed firmware-update state from a management point."""
+
+    management_point: ManagementPoint
+
+    @property
+    def installed_version(self) -> str | None:
+        """Return the installed firmware or software version."""
+        installed = self.management_point.firmware_version or self.management_point.software_version
+        return installed.value if installed is not None else None
+
+    @property
+    def update_supported(self) -> bool:
+        """Return whether the cloud allows firmware installation."""
+        supported = self.management_point.is_firmware_update_supported
+        return bool(supported.value) if supported is not None else False
+
+    @property
+    def offered_update(self) -> dict[str, Any] | None:
+        """Return the optional offered firmware metadata."""
+        update = self.management_point.firmware_update
+        return update.value if update is not None else None
+
+    @property
+    def firmware_id(self) -> str | None:
+        """Return the install target ID for the offered update."""
+        update = self.offered_update
+        firmware_id = update.get("id") if update is not None else None
+        return firmware_id if isinstance(firmware_id, str) else None
+
+    @property
+    def in_progress(self) -> bool:
+        """Return whether a firmware installation is in progress."""
+        status = self.management_point.firmware_update_status
+        return status is not None and status.value == "in-progress"
 
 
 @dataclass(slots=True)

@@ -11,10 +11,14 @@ from daikin_onecta import GatewayDevice
 from daikin_onecta.models import (
     Characteristic,
     ClimateControl,
+    DomesticHotWater,
+    EnergyData,
+    Firmware,
     ManagementPoint,
     Schedule,
     ScheduleOption,
     ScheduleSelection,
+    ScheduleState,
     TemperatureControl,
 )
 
@@ -239,6 +243,124 @@ def test_climate_control_view() -> None:
     assert climate.fan_operation("missing") is None
     assert climate.preset("powerfulMode") is point.characteristic("powerfulMode")
     assert climate.preset("holidayMode") is point.holiday_mode
+
+
+def test_platform_state_views() -> None:
+    """Expose hot-water, schedule, and firmware state without API-tree traversal."""
+    points = [point for device in load_devices("altherma_firmwareupdate.json") for point in device.management_points]
+
+    hot_water = next(point.domestic_hot_water for point in points if point.domestic_hot_water)
+    assert isinstance(hot_water, DomesticHotWater)
+    assert hot_water.temperature is not None
+    assert hot_water.current_temperature is not None
+
+    schedule_points = [point for device in load_devices("altherma_schedule.json") for point in device.management_points]
+    schedule = next(point.schedule_state for point in schedule_points if point.schedule_state)
+    assert isinstance(schedule, ScheduleState)
+    assert schedule.active_selection is not None
+
+    firmware = next(point.firmware for point in points if point.firmware)
+    assert isinstance(firmware, Firmware)
+    assert firmware.installed_version is not None
+
+
+def test_scalar_and_energy_views() -> None:
+    """Expose generic scalar and rolling energy values through typed helpers."""
+    point = next(
+        point
+        for device in load_devices("altherma.json")
+        for point in device.management_points
+        if point.consumption is not None
+    )
+
+    assert point.scalar_characteristic("operationMode") is point.operation_mode
+    assert point.scalar_characteristics() == point.simple_characteristics()
+    assert isinstance(point.consumption, EnergyData)
+    assert point.consumption.values("electrical", "heating", "day") is not None
+    assert point.consumption.current_total("electrical", "heating", "day") is not None
+    assert point.consumption.current_total("electrical", "heating", "month") is None
+
+
+def test_platform_state_views_handle_absent_data() -> None:
+    """Keep unavailable platform-specific state absent without tree traversal."""
+    point = ManagementPoint(
+        embedded_id="gateway",
+        management_point_type="gateway",
+    )
+
+    assert point.domestic_hot_water is None
+    assert point.schedule_state is None
+    assert point.firmware is None
+    assert point.consumption is None
+    assert point.energy_output is None
+
+    hot_water = ManagementPoint(
+        embedded_id="hot-water",
+        management_point_type="domesticHotWaterTank",
+    ).domestic_hot_water
+    assert isinstance(hot_water, DomesticHotWater)
+    assert hot_water.power is None
+    assert hot_water.powerful_mode is None
+    assert hot_water.temperature is None
+
+    schedule = ScheduleState(point)
+    assert schedule.selections == []
+    assert schedule.active_selection is None
+
+    firmware = Firmware(point)
+    assert firmware.update_supported is False
+    assert firmware.offered_update is None
+    assert firmware.firmware_id is None
+    assert firmware.in_progress is False
+
+
+def test_energy_data_views_handle_unknown_and_rolling_values() -> None:
+    """Return absent data safely and calculate each documented rolling period."""
+    point = ManagementPoint.from_dict(
+        {
+            "embeddedId": "climate",
+            "managementPointType": "climateControl",
+            "consumptionData": {
+                "value": {
+                    "electrical": {
+                        "heating": {
+                            "d": [None] * 12 + [1.25],
+                            "w": [None] * 7 + [2.5],
+                            "m": [None] * 12 + [3.75],
+                        }
+                    }
+                }
+            },
+        }
+    )
+    energy = point.consumption
+    assert isinstance(energy, EnergyData)
+
+    assert energy.source("missing") is None
+    assert energy.series("electrical", "cooling") is None
+    assert energy.values("electrical", "cooling", "day") is None
+    assert energy.current_total("electrical", "cooling", "day") is None
+    assert energy.current_total("electrical", "heating", "week") == 2.5
+    assert energy.current_total("electrical", "heating", "month", month=0) is None
+    assert energy.current_total("electrical", "heating", "month", month=1) == 3.75
+
+
+def test_firmware_view_handles_optional_update_data() -> None:
+    """Expose firmware update state only when the cloud supplies useful values."""
+    firmware = Firmware(
+        ManagementPoint(
+            embedded_id="gateway",
+            management_point_type="gateway",
+            is_firmware_update_supported=Characteristic(value=True),
+            firmware_update=Characteristic(value={"id": 42}),
+            firmware_update_status=Characteristic(value="in-progress"),
+        )
+    )
+
+    assert firmware.update_supported is True
+    assert firmware.offered_update == {"id": 42}
+    assert firmware.firmware_id is None
+    assert firmware.in_progress is True
 
 
 def test_climate_control_view_handles_optional_data() -> None:
