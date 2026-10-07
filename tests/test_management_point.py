@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from daikin_onecta import ManagementPointClient, OnectaClient
+from daikin_onecta import AirPurificationClient, ManagementPointClient, OnectaClient
 
 
 @pytest.mark.asyncio
@@ -38,3 +38,4 @@ def test_management_point_client_factory() -> None:
     client = OnectaClient(AsyncMock(), AsyncMock())
 
     assert isinstance(client.management_point("gateway-1", "zone-1"), ManagementPointClient)
+    assert isinstance(client.air_purification("gateway-1", "zone-1"), AirPurificationClient)

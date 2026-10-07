@@ -8,6 +8,7 @@ from typing import Any
 import aiohttp
 from mashumaro.exceptions import MissingField
 
+from .air_purification import AirPurificationClient
 from .climate import ClimateControlClient
 from .domestic_hot_water import DomesticHotWaterClient
 from .exceptions import (
@@ -157,6 +158,10 @@ class OnectaClient:
     def climate_control(self, gateway_id: str, management_point_id: str) -> ClimateControlClient:
         """Return commands bound to one climate-control management point."""
         return ClimateControlClient(self, gateway_id, management_point_id)
+
+    def air_purification(self, gateway_id: str, management_point_id: str) -> AirPurificationClient:
+        """Return commands bound to one air-purification management point."""
+        return AirPurificationClient(self, gateway_id, management_point_id)
 
     def management_point(self, gateway_id: str, management_point_id: str) -> ManagementPointClient:
         """Return generic commands bound to one management point."""
