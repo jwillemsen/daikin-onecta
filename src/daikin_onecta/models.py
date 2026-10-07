@@ -740,7 +740,7 @@ class ClimateControl:
             return None
         return (fan_control.value.operation_modes or {}).get(mode)
 
-    def mode_characteristic(self, name: str) -> Characteristic[Any] | HolidayMode | None:
+    def mode_characteristic(self, name: str) -> Characteristic[Any] | None:
         """Return a named Daikin mode characteristic by its API name."""
         if name == "holidayMode":
             return self.management_point.holiday_mode
