@@ -19,6 +19,69 @@ class OnectaModel(DataClassDictMixin):
 
 
 @dataclass(slots=True)
+class SiteLocation(OnectaModel):
+    """Location metadata reported for a Daikin site."""
+
+    country_code: str | None = None
+    place_id: str | None = None
+    latitude: float | None = None
+    longitude: float | None = None
+    level: str | None = None
+
+    class Config(OnectaModel.Config):
+        """Mashumaro configuration."""
+
+        aliases = {"country_code": "countryCode", "place_id": "placeID"}
+
+
+@dataclass(slots=True)
+class SiteUser(OnectaModel):
+    """A user linked to a Daikin site."""
+
+    id: str
+    role: str | None = None
+
+
+@dataclass(slots=True)
+class Site(OnectaModel):
+    """A Daikin site and its linked gateway devices and users."""
+
+    id: str
+    name: str | None = None
+    role: str | None = None
+    location: SiteLocation | None = None
+    users: list[SiteUser] | None = None
+    gateway_device_ids: list[str] | None = None
+
+    class Config(OnectaModel.Config):
+        """Mashumaro configuration."""
+
+        aliases = {"gateway_device_ids": "gatewayDevices"}
+
+    @classmethod
+    def __pre_deserialize__(cls, data: dict[str, Any]) -> dict[str, Any]:
+        """Reject malformed gateway-device IDs before they affect membership."""
+        data = dict(data)
+        gateway_devices = data.get("gatewayDevices")
+        if gateway_devices is not None and (
+            not isinstance(gateway_devices, list)
+            or not all(isinstance(gateway_device_id, str) for gateway_device_id in gateway_devices)
+        ):
+            raise ValueError("gatewayDevices must be a list of strings")
+        return data
+
+    def has_gateway_device(self, gateway_device_id: str) -> bool | None:
+        """Return whether the site's complete device list contains an ID.
+
+        ``None`` preserves an absent ``gatewayDevices`` field as unknown rather
+        than treating it as evidence that a gateway was removed.
+        """
+        if self.gateway_device_ids is None:
+            return None
+        return gateway_device_id in self.gateway_device_ids
+
+
+@dataclass(slots=True)
 class Characteristic[T](OnectaModel):
     """Common envelope used by Daikin management-point characteristics."""
 
