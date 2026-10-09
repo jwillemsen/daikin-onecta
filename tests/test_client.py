@@ -55,6 +55,78 @@ async def test_get_gateway_devices() -> None:
 
 
 @pytest.mark.asyncio
+async def test_get_sites() -> None:
+    """Return the complete documented site data."""
+    payload = [
+        {
+            "id": "site-1",
+            "name": "Home",
+            "role": "admin",
+            "location": {
+                "countryCode": "NL",
+                "placeID": "NL/GEO/p0/1",
+                "latitude": 52.0,
+                "longitude": 5.0,
+                "level": "municipality",
+            },
+            "users": [{"id": "user-1", "role": "admin"}],
+            "gatewayDevices": ["gateway-1", "gateway-2"],
+        }
+    ]
+
+    async with aiohttp.ClientSession() as session:
+        with aioresponses() as mocked:
+            mocked.get(f"{BASE_URL}/v1/sites", payload=payload)
+            client = OnectaClient(session, token_provider)
+
+            sites = await client.get_sites()
+
+    site = sites[0]
+    assert site.id == "site-1"
+    assert site.name == "Home"
+    assert site.role == "admin"
+    assert site.location is not None
+    assert site.location.country_code == "NL"
+    assert site.location.place_id == "NL/GEO/p0/1"
+    assert site.location.latitude == 52.0
+    assert site.location.longitude == 5.0
+    assert site.location.level == "municipality"
+    assert [(user.id, user.role) for user in site.users or []] == [("user-1", "admin")]
+    assert site.gateway_device_ids == ["gateway-1", "gateway-2"]
+    assert site.has_gateway_device("gateway-1") is True
+    assert site.has_gateway_device("gateway-3") is False
+
+
+@pytest.mark.asyncio
+async def test_get_sites_preserves_unknown_gateway_membership() -> None:
+    """Do not treat an omitted device list as an empty one."""
+    async with aiohttp.ClientSession() as session:
+        with aioresponses() as mocked:
+            mocked.get(f"{BASE_URL}/v1/sites", payload=[{"id": "site-1"}])
+            client = OnectaClient(session, token_provider)
+
+            sites = await client.get_sites()
+
+    assert sites[0].gateway_device_ids is None
+    assert sites[0].has_gateway_device("gateway-1") is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("payload", [None, {"id": "site-1"}, [{"id": "site-1", "gatewayDevices": "gateway-1"}]])
+async def test_get_sites_rejects_invalid_responses(payload: object) -> None:
+    """Reject malformed site responses."""
+    async with aiohttp.ClientSession() as session:
+        with aioresponses() as mocked:
+            mocked.get(f"{BASE_URL}/v1/sites", payload=payload)
+            client = OnectaClient(session, token_provider)
+
+            with pytest.raises(OnectaResponseError) as exc_info:
+                await client.get_sites()
+
+    assert exc_info.value.path == "/v1/sites"
+
+
+@pytest.mark.asyncio
 async def test_rate_limit_error() -> None:
     """Expose Daikin retry-after information on HTTP 429."""
     async with aiohttp.ClientSession() as session:

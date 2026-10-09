@@ -31,6 +31,9 @@ from .models import (
     ScheduleMode,
     ScheduleSelection,
     ScheduleState,
+    Site,
+    SiteLocation,
+    SiteUser,
 )
 from .rate_limit import RateLimit
 from .schedule import ScheduleClient
@@ -65,5 +68,8 @@ __all__ = [
     "ScheduleMode",
     "ScheduleSelection",
     "ScheduleState",
+    "Site",
+    "SiteLocation",
+    "SiteUser",
     "get_account_id",
 ]

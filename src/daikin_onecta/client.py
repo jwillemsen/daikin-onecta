@@ -21,7 +21,7 @@ from .exceptions import (
 )
 from .firmware import FirmwareClient
 from .management_point import ManagementPointClient
-from .models import GatewayDevice
+from .models import GatewayDevice, Site
 from .rate_limit import RateLimit
 from .schedule import ScheduleClient
 
@@ -113,6 +113,26 @@ class OnectaClient:
                 "Invalid gateway device data",
                 method="GET",
                 path="/v1/gateway-devices",
+            ) from err
+
+    async def get_sites(self) -> list[Site]:
+        """Return the account's sites and linked gateway devices."""
+        data = await self._request("GET", "/v1/sites")
+        if not isinstance(data, list):
+            raise OnectaResponseError(
+                200,
+                "Expected a list of sites",
+                method="GET",
+                path="/v1/sites",
+            )
+        try:
+            return [Site.from_dict(site) for site in data]
+        except (MissingField, TypeError, ValueError) as err:
+            raise OnectaResponseError(
+                200,
+                "Invalid site data",
+                method="GET",
+                path="/v1/sites",
             ) from err
 
     async def set_schedule(
