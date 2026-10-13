@@ -2,19 +2,28 @@
 
 import json
 from collections.abc import Awaitable, Callable
+from datetime import date
 from typing import Any
 
 import aiohttp
 from mashumaro.exceptions import MissingField
 
+from .air_purification import AirPurificationClient
+from .climate import ClimateControlClient
+from .domestic_hot_water import DomesticHotWaterClient
 from .exceptions import (
     OnectaApiError,
     OnectaAuthenticationError,
     OnectaConnectionError,
     OnectaRateLimitError,
+    OnectaRequestError,
+    OnectaResponseError,
 )
-from .models import GatewayDevice
+from .firmware import FirmwareClient
+from .management_point import ManagementPointClient
+from .models import GatewayDevice, Site
 from .rate_limit import RateLimit
+from .schedule import ScheduleClient
 
 ONECTA_API_URL = "https://api.onecta.daikineurope.com"
 
@@ -61,15 +70,13 @@ class OnectaClient:
                 response_text = await response.text()
 
                 if response.status in (401, 403):
-                    raise OnectaAuthenticationError(
-                        f"Daikin Onecta API authentication failed with HTTP {response.status}"
-                    )
+                    raise OnectaAuthenticationError(response.status, method=method, path=path)
 
                 if response.status == 429:
-                    raise OnectaRateLimitError(self.rate_limit.retry_after)
+                    raise OnectaRateLimitError(self.rate_limit, method=method, path=path)
 
                 if response.status >= 400:
-                    raise OnectaApiError(response.status, response_text)
+                    raise OnectaApiError(response.status, response_text, method=method, path=path)
 
                 if response.status == 204 or not response_text:
                     return None
@@ -77,21 +84,56 @@ class OnectaClient:
                 try:
                     return json.loads(response_text)
                 except json.JSONDecodeError as err:
-                    raise OnectaApiError(response.status, "Invalid JSON response") from err
-        except OnectaApiError, OnectaAuthenticationError, OnectaRateLimitError:
+                    raise OnectaResponseError(
+                        response.status,
+                        "Invalid JSON response",
+                        method=method,
+                        path=path,
+                    ) from err
+        except OnectaRequestError:
             raise
         except (TimeoutError, aiohttp.ClientError) as err:
-            raise OnectaConnectionError(str(err)) from err
+            raise OnectaConnectionError(str(err), method=method, path=path) from err
 
     async def get_gateway_devices(self) -> list[GatewayDevice]:
         """Return all gateway devices available to the account."""
         data = await self._request("GET", "/v1/gateway-devices")
         if not isinstance(data, list):
-            raise OnectaApiError(200, "Expected a list of gateway devices")
+            raise OnectaResponseError(
+                200,
+                "Expected a list of gateway devices",
+                method="GET",
+                path="/v1/gateway-devices",
+            )
         try:
             return [GatewayDevice.from_dict(device) for device in data]
         except (MissingField, TypeError, ValueError) as err:
-            raise OnectaApiError(200, "Invalid gateway device data") from err
+            raise OnectaResponseError(
+                200,
+                "Invalid gateway device data",
+                method="GET",
+                path="/v1/gateway-devices",
+            ) from err
+
+    async def get_sites(self) -> list[Site]:
+        """Return the account's sites and linked gateway devices."""
+        data = await self._request("GET", "/v1/sites")
+        if not isinstance(data, list):
+            raise OnectaResponseError(
+                200,
+                "Expected a list of sites",
+                method="GET",
+                path="/v1/sites",
+            )
+        try:
+            return [Site.from_dict(site) for site in data]
+        except (MissingField, TypeError, ValueError) as err:
+            raise OnectaResponseError(
+                200,
+                "Invalid site data",
+                method="GET",
+                path="/v1/sites",
+            ) from err
 
     async def set_schedule(
         self,
@@ -102,13 +144,73 @@ class OnectaClient:
         *,
         enabled: bool = True,
     ) -> None:
-        """Select or disable a configured schedule for a management-point mode."""
-        await self.put_management_point(
-            gateway_id,
-            management_point_id,
-            f"schedule/{mode}/current",
-            {"scheduleId": schedule, "enabled": enabled},
+        """Select or disable a configured schedule for a management-point mode.
+
+        This compatibility helper delegates to :meth:`schedule`.
+        New callers should use the bound schedule client.
+        """
+        await self.schedule(gateway_id, management_point_id).set_current(
+            mode,
+            schedule,
+            enabled=enabled,
         )
+
+    async def set_holiday_mode(
+        self,
+        gateway_id: str,
+        management_point_id: str,
+        enabled: bool,
+        *,
+        start_date: date | None = None,
+        end_date: date | None = None,
+    ) -> None:
+        """Enable or disable holiday mode for a management point.
+
+        This compatibility helper delegates to :meth:`climate_control`.
+        New callers should use the bound climate-control client.
+        """
+        await self.climate_control(gateway_id, management_point_id).set_holiday_mode(
+            enabled,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    def climate_control(self, gateway_id: str, management_point_id: str) -> ClimateControlClient:
+        """Return commands bound to one climate-control management point."""
+        return ClimateControlClient(self, gateway_id, management_point_id)
+
+    def air_purification(self, gateway_id: str, management_point_id: str) -> AirPurificationClient:
+        """Return commands bound to one air-purification management point."""
+        return AirPurificationClient(self, gateway_id, management_point_id)
+
+    def management_point(self, gateway_id: str, management_point_id: str) -> ManagementPointClient:
+        """Return generic commands bound to one management point."""
+        return ManagementPointClient(self, gateway_id, management_point_id)
+
+    def domestic_hot_water(self, gateway_id: str, management_point_id: str) -> DomesticHotWaterClient:
+        """Return commands bound to one domestic-hot-water management point."""
+        return DomesticHotWaterClient(self, gateway_id, management_point_id)
+
+    def schedule(self, gateway_id: str, management_point_id: str) -> ScheduleClient:
+        """Return schedule commands bound to one management point."""
+        return ScheduleClient(self, gateway_id, management_point_id)
+
+    async def install_firmware(
+        self,
+        gateway_id: str,
+        management_point_id: str,
+        firmware_id: str,
+    ) -> None:
+        """Start installation of an offered firmware version.
+
+        This compatibility helper delegates to :meth:`firmware`.
+        New callers should use the bound firmware client.
+        """
+        await self.firmware(gateway_id, management_point_id).install(firmware_id)
+
+    def firmware(self, gateway_id: str, management_point_id: str) -> FirmwareClient:
+        """Return firmware commands bound to one management point."""
+        return FirmwareClient(self, gateway_id, management_point_id)
 
     async def patch_characteristic(
         self,

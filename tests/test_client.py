@@ -1,5 +1,7 @@
 """Tests for the Daikin Onecta client."""
 
+from datetime import date
+
 import aiohttp
 import pytest
 from aioresponses import aioresponses
@@ -11,6 +13,7 @@ from daikin_onecta import (
     OnectaClient,
     OnectaConnectionError,
     OnectaRateLimitError,
+    OnectaResponseError,
 )
 
 BASE_URL = "https://api.onecta.daikineurope.com"
@@ -52,6 +55,78 @@ async def test_get_gateway_devices() -> None:
 
 
 @pytest.mark.asyncio
+async def test_get_sites() -> None:
+    """Return the complete documented site data."""
+    payload = [
+        {
+            "id": "site-1",
+            "name": "Home",
+            "role": "admin",
+            "location": {
+                "countryCode": "NL",
+                "placeID": "NL/GEO/p0/1",
+                "latitude": 52.0,
+                "longitude": 5.0,
+                "level": "municipality",
+            },
+            "users": [{"id": "user-1", "role": "admin"}],
+            "gatewayDevices": ["gateway-1", "gateway-2"],
+        }
+    ]
+
+    async with aiohttp.ClientSession() as session:
+        with aioresponses() as mocked:
+            mocked.get(f"{BASE_URL}/v1/sites", payload=payload)
+            client = OnectaClient(session, token_provider)
+
+            sites = await client.get_sites()
+
+    site = sites[0]
+    assert site.id == "site-1"
+    assert site.name == "Home"
+    assert site.role == "admin"
+    assert site.location is not None
+    assert site.location.country_code == "NL"
+    assert site.location.place_id == "NL/GEO/p0/1"
+    assert site.location.latitude == 52.0
+    assert site.location.longitude == 5.0
+    assert site.location.level == "municipality"
+    assert [(user.id, user.role) for user in site.users or []] == [("user-1", "admin")]
+    assert site.gateway_device_ids == ["gateway-1", "gateway-2"]
+    assert site.has_gateway_device("gateway-1") is True
+    assert site.has_gateway_device("gateway-3") is False
+
+
+@pytest.mark.asyncio
+async def test_get_sites_preserves_unknown_gateway_membership() -> None:
+    """Do not treat an omitted device list as an empty one."""
+    async with aiohttp.ClientSession() as session:
+        with aioresponses() as mocked:
+            mocked.get(f"{BASE_URL}/v1/sites", payload=[{"id": "site-1"}])
+            client = OnectaClient(session, token_provider)
+
+            sites = await client.get_sites()
+
+    assert sites[0].gateway_device_ids is None
+    assert sites[0].has_gateway_device("gateway-1") is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("payload", [None, {"id": "site-1"}, [{"id": "site-1", "gatewayDevices": "gateway-1"}]])
+async def test_get_sites_rejects_invalid_responses(payload: object) -> None:
+    """Reject malformed site responses."""
+    async with aiohttp.ClientSession() as session:
+        with aioresponses() as mocked:
+            mocked.get(f"{BASE_URL}/v1/sites", payload=payload)
+            client = OnectaClient(session, token_provider)
+
+            with pytest.raises(OnectaResponseError) as exc_info:
+                await client.get_sites()
+
+    assert exc_info.value.path == "/v1/sites"
+
+
+@pytest.mark.asyncio
 async def test_rate_limit_error() -> None:
     """Expose Daikin retry-after information on HTTP 429."""
     async with aiohttp.ClientSession() as session:
@@ -59,14 +134,25 @@ async def test_rate_limit_error() -> None:
             mocked.get(
                 f"{BASE_URL}/v1/gateway-devices",
                 status=429,
-                headers={"Retry-After": "60"},
+                headers={
+                    "Retry-After": "60",
+                    "X-RateLimit-Limit-minute": "120",
+                    "X-RateLimit-Remaining-day": "456",
+                    "RateLimit-Reset": "1200",
+                },
             )
             client = OnectaClient(session, token_provider)
 
             with pytest.raises(OnectaRateLimitError) as exc_info:
                 await client.get_gateway_devices()
 
-            assert exc_info.value.retry_after == 60
+            error = exc_info.value
+            assert error.method == "GET"
+            assert error.path == "/v1/gateway-devices"
+            assert error.retry_after == 60
+            assert error.rate_limit.minute_limit == 120
+            assert error.rate_limit.day_remaining == 456
+            assert error.rate_limit.reset == 1200
 
 
 @pytest.mark.asyncio
@@ -78,8 +164,12 @@ async def test_authentication_error(status: int) -> None:
             mocked.get(f"{BASE_URL}/v1/gateway-devices", status=status)
             client = OnectaClient(session, token_provider)
 
-            with pytest.raises(OnectaAuthenticationError):
+            with pytest.raises(OnectaAuthenticationError) as exc_info:
                 await client.get_gateway_devices()
+
+            assert exc_info.value.status == status
+            assert exc_info.value.method == "GET"
+            assert exc_info.value.path == "/v1/gateway-devices"
 
 
 @pytest.mark.asyncio
@@ -94,6 +184,8 @@ async def test_unexpected_api_error() -> None:
                 await client.get_gateway_devices()
 
             assert exc_info.value.status == 500
+            assert exc_info.value.method == "GET"
+            assert exc_info.value.path == "/v1/gateway-devices"
 
 
 @pytest.mark.asyncio
@@ -116,14 +208,18 @@ async def test_set_schedule() -> None:
 
 @pytest.mark.asyncio
 async def test_invalid_json_response() -> None:
-    """Translate a successful non-JSON response to an API error."""
+    """Translate a successful non-JSON response to a response error."""
     async with aiohttp.ClientSession() as session:
         with aioresponses() as mocked:
             mocked.get(f"{BASE_URL}/v1/gateway-devices", status=200, body="not json")
             client = OnectaClient(session, token_provider)
 
-            with pytest.raises(OnectaApiError, match="Invalid JSON response"):
+            with pytest.raises(OnectaResponseError, match="Invalid JSON response") as exc_info:
                 await client.get_gateway_devices()
+
+            assert exc_info.value.status == 200
+            assert exc_info.value.method == "GET"
+            assert exc_info.value.path == "/v1/gateway-devices"
 
 
 @pytest.mark.asyncio
@@ -163,8 +259,11 @@ async def test_connection_error(error: Exception) -> None:
             mocked.get(f"{BASE_URL}/v1/gateway-devices", exception=error)
             client = OnectaClient(session, token_provider)
 
-            with pytest.raises(OnectaConnectionError, match=str(error)):
+            with pytest.raises(OnectaConnectionError, match=str(error)) as exc_info:
                 await client.get_gateway_devices()
+
+            assert exc_info.value.method == "GET"
+            assert exc_info.value.path == "/v1/gateway-devices"
 
 
 @pytest.mark.asyncio
@@ -248,3 +347,80 @@ async def test_disable_schedule() -> None:
                 "scheduleId": "scheduleHeatingRT2",
                 "enabled": False,
             }
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("enabled", "start_date", "end_date", "expected"),
+    [
+        (
+            True,
+            date(2026, 10, 5),
+            date(2026, 12, 4),
+            {"enabled": True, "startDate": "2026-10-05", "endDate": "2026-12-04"},
+        ),
+        (False, None, None, {"enabled": False}),
+    ],
+)
+async def test_set_holiday_mode(
+    enabled: bool,
+    start_date: date | None,
+    end_date: date | None,
+    expected: dict[str, str | bool],
+) -> None:
+    """Set holiday mode through its typed API endpoint."""
+    async with aiohttp.ClientSession() as session:
+        with aioresponses() as mocked:
+            url = f"{BASE_URL}/v1/gateway-devices/gateway-1/management-points/climateControl/holiday-mode"
+            mocked.post(url, status=204)
+            client = OnectaClient(session, token_provider)
+
+            await client.set_holiday_mode(
+                "gateway-1",
+                "climateControl",
+                enabled,
+                start_date=start_date,
+                end_date=end_date,
+            )
+
+            request = mocked.requests[("POST", URL(url))][0]
+            assert request.kwargs["json"] == expected
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("enabled", "start_date", "end_date"),
+    [(True, None, None), (False, date(2026, 10, 5), date(2026, 12, 4))],
+)
+async def test_set_holiday_mode_rejects_invalid_dates(
+    enabled: bool,
+    start_date: date | None,
+    end_date: date | None,
+) -> None:
+    """Reject invalid holiday-mode payloads before making a cloud request."""
+    async with aiohttp.ClientSession() as session:
+        client = OnectaClient(session, token_provider)
+
+        with pytest.raises(ValueError):
+            await client.set_holiday_mode(
+                "gateway-1",
+                "climateControl",
+                enabled,
+                start_date=start_date,
+                end_date=end_date,
+            )
+
+
+@pytest.mark.asyncio
+async def test_install_firmware() -> None:
+    """Start a firmware installation through its typed API endpoint."""
+    async with aiohttp.ClientSession() as session:
+        with aioresponses() as mocked:
+            url = f"{BASE_URL}/v1/gateway-devices/gateway-1/management-points/gateway/firmware/firmware-1"
+            mocked.put(url, status=204)
+            client = OnectaClient(session, token_provider)
+
+            await client.install_firmware("gateway-1", "gateway", "firmware-1")
+
+            request = mocked.requests[("PUT", URL(url))][0]
+            assert request.kwargs["json"] is None

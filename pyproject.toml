@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "daikin-onecta"
-version = "0.3.0"
+version = "0.6.1"
 description = "Async Python client for the Daikin Onecta cloud API"
 readme = "README.md"
 requires-python = ">=3.14"
@@ -38,6 +38,7 @@ test = [
 ]
 dev = [
   "daikin-onecta[test]",
+  "mypy>=1.18",
   "ruff>=0.13",
 ]
 
@@ -51,3 +52,10 @@ target-version = "py314"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP"]
+
+[tool.mypy]
+files = ["src/daikin_onecta"]
+strict = true
+
+[tool.setuptools.package-data]
+daikin_onecta = ["py.typed"]
