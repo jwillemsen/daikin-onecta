@@ -1,6 +1,8 @@
 """Tests for the Daikin Onecta client."""
 
+import json
 from datetime import date
+from pathlib import Path
 
 import aiohttp
 import pytest
@@ -17,6 +19,7 @@ from daikin_onecta import (
 )
 
 BASE_URL = "https://api.onecta.daikineurope.com"
+FIXTURES = Path(__file__).parent / "fixtures"
 
 
 async def token_provider() -> str:
@@ -52,6 +55,24 @@ async def test_get_gateway_devices() -> None:
             assert devices[0].device_model == "test"
             assert devices[0].available is True
             assert client.rate_limit.day_remaining == 123
+
+
+@pytest.mark.asyncio
+async def test_get_gateway_devices_without_management_points() -> None:
+    """Allow a gateway response where Daikin omits management points."""
+    payload = json.loads((FIXTURES / "issue_841_gateway_devices.json").read_text())
+
+    async with aiohttp.ClientSession() as session:
+        with aioresponses() as mocked:
+            mocked.get(f"{BASE_URL}/v1/gateway-devices", payload=payload)
+            client = OnectaClient(session, token_provider)
+
+            devices = await client.get_gateway_devices()
+
+    assert len(devices) == 1
+    assert devices[0].id == "test-altherma-gateway"
+    assert devices[0].device_type == "heating"
+    assert devices[0].management_points == []
 
 
 @pytest.mark.asyncio

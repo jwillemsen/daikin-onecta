@@ -1,0 +1,11 @@
+# serializer version: 1
+# name: test_all_existing_device_fixtures[issue_841_gateway_devices.json]
+  list([
+    dict({
+      'available': True,
+      'management_points': list([
+      ]),
+      'model': 'Altherma',
+    }),
+  ])
+# ---

@@ -1064,8 +1064,8 @@ class GatewayDevice(OnectaModel):
 
     id: str
     device_model: str
-    management_points: list[ManagementPoint]
     cloud_connection: Characteristic[bool]
+    management_points: list[ManagementPoint] = field(default_factory=list)
     device_type: str | None = None
     embedded_id: str | None = None
     timestamp: str | None = None
