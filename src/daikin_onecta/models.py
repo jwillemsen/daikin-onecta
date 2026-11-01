@@ -1064,8 +1064,8 @@ class GatewayDevice(OnectaModel):
 
     id: str
     device_model: str
-    management_points: list[ManagementPoint]
     cloud_connection: Characteristic[bool]
+    management_points: list[ManagementPoint] = field(default_factory=list)
     device_type: str | None = None
     embedded_id: str | None = None
     timestamp: str | None = None
@@ -1082,14 +1082,6 @@ class GatewayDevice(OnectaModel):
             "embedded_id": "embeddedId",
             "last_update_received": "lastUpdateReceived",
         }
-
-    @classmethod
-    def __pre_deserialize__(cls, data: dict[str, Any]) -> dict[str, Any]:
-        """Handle gateways that omit management points from their response."""
-        data = dict(data)
-        if "managementPoints" not in data and "management_points" not in data:
-            data["managementPoints"] = []
-        return data
 
     def management_point(self, embedded_id: str) -> ManagementPoint | None:
         """Return a management point by its embedded ID."""
