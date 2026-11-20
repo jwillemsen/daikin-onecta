@@ -292,6 +292,25 @@ def test_fan_control_model(snapshot: SnapshotAssertion) -> None:
     } == snapshot(extension_class=SingleFileAmberSnapshotExtension)
 
 
+def test_fixed_fan_direction_model() -> None:
+    """Deserialize the fixed louvre position of a fan-direction axis."""
+    device = load_devices("dry.json")[2]
+    point = next(point for point in device.management_points if point.fan_control is not None)
+    fan_control = point.fan_control
+    assert fan_control is not None
+    assert fan_control.value.operation_modes is not None
+
+    cooling = fan_control.value.operation_modes["cooling"]
+    assert cooling.fan_direction is not None
+    vertical = cooling.fan_direction.vertical
+    assert vertical is not None
+    assert vertical.current_mode.value == "fixed"
+    assert vertical.current_mode.values == ["swing", "fixed"]
+    assert vertical.modes is not None
+    fixed = vertical.modes["fixed"]
+    assert (fixed.value, fixed.min_value, fixed.max_value, fixed.step_value, fixed.settable) == (2, 1, 5, 1, True)
+
+
 def test_climate_control_view() -> None:
     """Expose native climate state without consumers traversing API trees."""
     device = load_devices("climate_floorheatingairflow.json")[0]
