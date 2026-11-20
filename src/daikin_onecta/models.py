@@ -374,10 +374,31 @@ class FanSpeed(OnectaModel):
 
 
 @dataclass(slots=True)
+class FanDirectionMode(OnectaModel):
+    """Numeric louvre position for a fan direction mode."""
+
+    value: int | float
+    settable: bool = False
+    min_value: int | float | None = None
+    max_value: int | float | None = None
+    step_value: int | float | None = None
+
+    class Config(OnectaModel.Config):
+        """Mashumaro configuration."""
+
+        aliases = {
+            "min_value": "minValue",
+            "max_value": "maxValue",
+            "step_value": "stepValue",
+        }
+
+
+@dataclass(slots=True)
 class FanDirectionAxis(OnectaModel):
     """Fan-direction selection for one axis."""
 
     current_mode: Characteristic[str]
+    modes: dict[str, FanDirectionMode] | None = None
 
     class Config(OnectaModel.Config):
         """Mashumaro configuration."""
