@@ -82,7 +82,7 @@ class ClimateControlClient:
         self,
         operation_mode: str,
         direction: Literal["vertical", "horizontal"],
-        position: int,
+        position: int | float,
     ) -> None:
         """Set the fixed louvre position of one fan-direction axis."""
         await self._patch(
