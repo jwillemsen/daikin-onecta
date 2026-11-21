@@ -341,6 +341,41 @@ def test_fixed_mode_normalizes_whole_json_numbers(
     assert all(type(value) is int for value in (mode.value, mode.min_value, mode.max_value, mode.step_value))
 
 
+@pytest.mark.parametrize(
+    ("mode_type", "field"),
+    [
+        pytest.param(mode_type, field, id=f"{mode_name}-{field}")
+        for mode_type, mode_name in (
+            (FanSpeedMode, "speed"),
+            (FanDirectionMode, "direction"),
+        )
+        for field in ("value", "minValue", "maxValue", "stepValue")
+    ],
+)
+def test_fixed_mode_rejects_fractional_json_numbers(
+    mode_type: type[FanSpeedMode] | type[FanDirectionMode], field: str
+) -> None:
+    """Reject fractional fixed-mode numbers rather than silently truncating them."""
+    data = {"value": 2, "minValue": 1, "maxValue": 5, "stepValue": 1}
+    data[field] = 2.5
+
+    with pytest.raises(ValueError, match=f"{field} must be an integer"):
+        mode_type.from_dict(data)
+
+
+@pytest.mark.parametrize(
+    "mode_type",
+    [pytest.param(FanSpeedMode, id="speed"), pytest.param(FanDirectionMode, id="direction")],
+)
+def test_fixed_mode_allows_missing_optional_range_values(
+    mode_type: type[FanSpeedMode] | type[FanDirectionMode],
+) -> None:
+    """Allow fixed modes that omit optional range metadata."""
+    mode = mode_type.from_dict({"value": 2})
+
+    assert (mode.value, mode.min_value, mode.max_value, mode.step_value) == (2, None, None, None)
+
+
 def test_climate_control_view() -> None:
     """Expose native climate state without consumers traversing API trees."""
     device = load_devices("climate_floorheatingairflow.json")[0]
