@@ -359,6 +359,21 @@ class _IntegerFixedMode(OnectaModel):
             "step_value": "stepValue",
         }
 
+    @classmethod
+    def __pre_deserialize__(cls, data: dict[str, Any]) -> dict[str, Any]:
+        """Reject fractional fixed-mode values instead of truncating them."""
+        for key in ("value", "minValue", "maxValue", "stepValue"):
+            value = data.get(key)
+            if value is None:
+                continue
+            if (
+                isinstance(value, bool)
+                or not isinstance(value, int | float)
+                or (isinstance(value, float) and not value.is_integer())
+            ):
+                raise ValueError(f"{key} must be an integer")
+        return data
+
 
 @dataclass(slots=True)
 class FanSpeedMode(_IntegerFixedMode):
