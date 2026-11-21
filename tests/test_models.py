@@ -15,7 +15,9 @@ from daikin_onecta.models import (
     DomesticHotWater,
     EnergyAggregate,
     EnergyData,
+    FanDirectionAxis,
     FanDirectionMode,
+    FanSpeed,
     FanSpeedMode,
     Firmware,
     FirmwareOffer,
@@ -361,6 +363,27 @@ def test_fixed_mode_rejects_fractional_json_numbers(
 
     with pytest.raises(ValueError, match=f"{field} must be an integer"):
         mode_type.from_dict(data)
+
+
+@pytest.mark.parametrize(
+    "control_type",
+    [pytest.param(FanSpeed, id="speed"), pytest.param(FanDirectionAxis, id="direction")],
+)
+def test_control_ignores_malformed_fixed_mode(
+    control_type: type[FanSpeed] | type[FanDirectionAxis], caplog: pytest.LogCaptureFixture
+) -> None:
+    """Drop one malformed fixed mode while preserving valid control modes."""
+    control = control_type.from_dict(
+        {
+            "currentMode": {"value": "auto", "settable": True},
+            "modes": {"fixed": {"value": 2.5}, "quiet": {"value": 3}},
+        }
+    )
+
+    assert control.modes is not None
+    assert "fixed" not in control.modes
+    assert control.modes["quiet"].value == 3
+    assert "Ignoring malformed fixed fan mode fixed" in caplog.text
 
 
 @pytest.mark.parametrize(
