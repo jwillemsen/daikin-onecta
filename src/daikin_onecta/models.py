@@ -341,14 +341,14 @@ class SensoryData(OnectaModel):
 
 
 @dataclass(slots=True)
-class FanSpeedMode(OnectaModel):
-    """Numeric fan-speed mode."""
+class _IntegerFixedMode(OnectaModel):
+    """Integer fixed fan mode with optional range metadata."""
 
-    value: int | float
+    value: int
     settable: bool = False
-    min_value: int | float | None = None
-    max_value: int | float | None = None
-    step_value: int | float | None = None
+    min_value: int | None = None
+    max_value: int | None = None
+    step_value: int | None = None
 
     class Config(OnectaModel.Config):
         """Mashumaro configuration."""
@@ -358,6 +358,11 @@ class FanSpeedMode(OnectaModel):
             "max_value": "maxValue",
             "step_value": "stepValue",
         }
+
+
+@dataclass(slots=True)
+class FanSpeedMode(_IntegerFixedMode):
+    """Integer fan-speed mode."""
 
 
 @dataclass(slots=True)
@@ -374,23 +379,8 @@ class FanSpeed(OnectaModel):
 
 
 @dataclass(slots=True)
-class FanDirectionMode(OnectaModel):
-    """Numeric louvre position for a fan direction mode."""
-
-    value: int | float
-    settable: bool = False
-    min_value: int | float | None = None
-    max_value: int | float | None = None
-    step_value: int | float | None = None
-
-    class Config(OnectaModel.Config):
-        """Mashumaro configuration."""
-
-        aliases = {
-            "min_value": "minValue",
-            "max_value": "maxValue",
-            "step_value": "stepValue",
-        }
+class FanDirectionMode(_IntegerFixedMode):
+    """Integer louvre position for a fan direction mode."""
 
 
 @dataclass(slots=True)

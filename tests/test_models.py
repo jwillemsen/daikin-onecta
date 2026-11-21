@@ -15,6 +15,8 @@ from daikin_onecta.models import (
     DomesticHotWater,
     EnergyAggregate,
     EnergyData,
+    FanDirectionMode,
+    FanSpeedMode,
     Firmware,
     FirmwareOffer,
     ManagementPoint,
@@ -309,6 +311,34 @@ def test_fixed_fan_direction_model() -> None:
     assert vertical.modes is not None
     fixed = vertical.modes["fixed"]
     assert (fixed.value, fixed.min_value, fixed.max_value, fixed.step_value, fixed.settable) == (2, 1, 5, 1, True)
+    assert all(type(value) is int for value in (fixed.value, fixed.min_value, fixed.max_value, fixed.step_value))
+
+    assert cooling.fan_speed is not None
+    assert cooling.fan_speed.modes is not None
+    fixed_speed = cooling.fan_speed.modes["fixed"]
+    assert all(
+        type(value) is int
+        for value in (
+            fixed_speed.value,
+            fixed_speed.min_value,
+            fixed_speed.max_value,
+            fixed_speed.step_value,
+        )
+    )
+
+
+@pytest.mark.parametrize(
+    "mode_type",
+    [pytest.param(FanSpeedMode, id="speed"), pytest.param(FanDirectionMode, id="direction")],
+)
+def test_fixed_mode_normalizes_whole_json_numbers(
+    mode_type: type[FanSpeedMode] | type[FanDirectionMode],
+) -> None:
+    """Normalize whole-valued JSON floats to integers in fixed-mode metadata."""
+    mode = mode_type.from_dict({"value": 2.0, "minValue": 1.0, "maxValue": 5.0, "stepValue": 1.0})
+
+    assert (mode.value, mode.min_value, mode.max_value, mode.step_value) == (2, 1, 5, 1)
+    assert all(type(value) is int for value in (mode.value, mode.min_value, mode.max_value, mode.step_value))
 
 
 def test_climate_control_view() -> None:
