@@ -57,6 +57,33 @@ async def test_get_gateway_devices() -> None:
             assert client.rate_limit.day_remaining == 123
 
 
+async def test_get_gateway_devices_ignores_malformed_fixed_mode(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Keep a gateway when one fixed fan-speed value is malformed."""
+    payload = json.loads((FIXTURES / "climate_fixedfanmode.json").read_text())
+    fixed_speed = payload[0]["managementPoints"][1]["fanControl"]["value"]
+    fixed_speed["operationModes"]["heating"]["fanSpeed"]["modes"]["fixed"]["value"] = 2.5
+
+    async with aiohttp.ClientSession() as session:
+        with aioresponses() as mocked:
+            mocked.get(f"{BASE_URL}/v1/gateway-devices", payload=payload)
+            client = OnectaClient(session, token_provider)
+
+            devices = await client.get_gateway_devices()
+
+    assert len(devices) == 1
+    point = devices[0].management_point("climateControl")
+    assert point is not None
+    climate_control = point.climate_control
+    assert climate_control is not None
+    fan_operation = climate_control.fan_operation("heating")
+    assert fan_operation is not None
+    assert fan_operation.fan_speed is not None
+    assert fan_operation.fan_speed.modes == {}
+    assert "Ignoring malformed fixed fan mode fixed" in caplog.text
+
+
 @pytest.mark.asyncio
 async def test_get_gateway_devices_without_management_points() -> None:
     """Allow a gateway response where Daikin omits management points."""
