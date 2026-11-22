@@ -7,7 +7,7 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 from syrupy.extensions.single_file import SingleFileAmberSnapshotExtension
 
-from daikin_onecta import GatewayDevice
+from daikin_onecta import GatewayDevice, models
 from daikin_onecta.models import (
     AirPurification,
     Characteristic,
@@ -366,24 +366,32 @@ def test_fixed_mode_rejects_fractional_json_numbers(
 
 
 @pytest.mark.parametrize(
-    "control_type",
-    [pytest.param(FanSpeed, id="speed"), pytest.param(FanDirectionAxis, id="direction")],
+    ("control_type", "control_name"),
+    [
+        pytest.param(FanSpeed, "fan speed", id="speed"),
+        pytest.param(FanDirectionAxis, "fan direction", id="direction"),
+    ],
 )
 def test_control_ignores_malformed_fixed_mode(
-    control_type: type[FanSpeed] | type[FanDirectionAxis], caplog: pytest.LogCaptureFixture
+    control_type: type[FanSpeed] | type[FanDirectionAxis],
+    control_name: str,
+    caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Drop one malformed fixed mode while preserving valid control modes."""
-    control = control_type.from_dict(
-        {
-            "currentMode": {"value": "auto", "settable": True},
-            "modes": {"fixed": {"value": 2.5}, "quiet": {"value": 3}},
-        }
-    )
+    monkeypatch.setattr(models, "_WARNED_MALFORMED_FIXED_MODES", set())
+    data = {
+        "currentMode": {"value": "auto", "settable": True},
+        "modes": {"fixed": {"value": 2.5}, "quiet": {"value": 3}},
+    }
+    control = control_type.from_dict(data)
+    repeated_control = control_type.from_dict(data)
 
     assert control.modes is not None
     assert "fixed" not in control.modes
     assert control.modes["quiet"].value == 3
-    assert "Ignoring malformed fixed fan mode fixed" in caplog.text
+    assert repeated_control.modes == control.modes
+    assert caplog.messages == [f"Ignoring malformed fixed {control_name} mode fixed (invalid value)"]
 
 
 @pytest.mark.parametrize(
