@@ -16,6 +16,7 @@ from daikin_onecta import (
     OnectaConnectionError,
     OnectaRateLimitError,
     OnectaResponseError,
+    models,
 )
 
 BASE_URL = "https://api.onecta.daikineurope.com"
@@ -58,9 +59,10 @@ async def test_get_gateway_devices() -> None:
 
 
 async def test_get_gateway_devices_ignores_malformed_fixed_mode(
-    caplog: pytest.LogCaptureFixture,
+    caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Keep a gateway when one fixed fan-speed value is malformed."""
+    monkeypatch.setattr(models, "_WARNED_MALFORMED_FIXED_MODES", set())
     payload = json.loads((FIXTURES / "climate_fixedfanmode.json").read_text())
     fixed_speed = payload[0]["managementPoints"][1]["fanControl"]["value"]
     fixed_speed["operationModes"]["heating"]["fanSpeed"]["modes"]["fixed"]["value"] = 2.5
@@ -81,7 +83,7 @@ async def test_get_gateway_devices_ignores_malformed_fixed_mode(
     assert fan_operation is not None
     assert fan_operation.fan_speed is not None
     assert fan_operation.fan_speed.modes == {}
-    assert "Ignoring malformed fixed fan mode fixed" in caplog.text
+    assert "Ignoring malformed fixed fan speed mode fixed (invalid value)" in caplog.text
 
 
 @pytest.mark.asyncio

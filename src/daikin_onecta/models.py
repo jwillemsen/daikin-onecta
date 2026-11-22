@@ -10,6 +10,7 @@ from mashumaro import DataClassDictMixin
 from mashumaro.config import BaseConfig
 
 _LOGGER = logging.getLogger(__name__)
+_WARNED_MALFORMED_FIXED_MODES: set[tuple[str, str, str]] = set()
 
 
 class OnectaModel(DataClassDictMixin):
@@ -375,7 +376,7 @@ class FanSpeedMode(_IntegerFixedMode):
     """Integer fan-speed mode."""
 
 
-def _without_invalid_integer_modes(data: dict[str, Any]) -> dict[str, Any]:
+def _without_invalid_integer_modes(data: dict[str, Any], *, control: str) -> dict[str, Any]:
     """Ignore malformed fixed-mode entries without rejecting their device."""
     data = dict(data)
     modes = data.get("modes")
@@ -384,10 +385,21 @@ def _without_invalid_integer_modes(data: dict[str, Any]) -> dict[str, Any]:
 
     valid_modes: dict[str, Any] = {}
     for name, mode in modes.items():
-        if isinstance(mode, dict) and not _invalid_integer_fixed_mode_field(mode):
+        mode_name = str(name)
+        invalid_field = _invalid_integer_fixed_mode_field(mode) if isinstance(mode, dict) else None
+        if isinstance(mode, dict) and invalid_field is None:
             valid_modes[name] = mode
-        else:
-            _LOGGER.warning("Ignoring malformed fixed fan mode %s", name)
+            continue
+
+        warning_key = (control, mode_name, invalid_field or "definition")
+        if warning_key not in _WARNED_MALFORMED_FIXED_MODES:
+            _WARNED_MALFORMED_FIXED_MODES.add(warning_key)
+            _LOGGER.warning(
+                "Ignoring malformed fixed %s mode %s (invalid %s)",
+                control,
+                mode_name,
+                invalid_field or "definition",
+            )
     data["modes"] = valid_modes
     return data
 
@@ -424,7 +436,7 @@ class FanSpeed(OnectaModel):
     @classmethod
     def __pre_deserialize__(cls, data: dict[str, Any]) -> dict[str, Any]:
         """Ignore malformed fixed-speed entries without rejecting the device."""
-        return _without_invalid_integer_modes(data)
+        return _without_invalid_integer_modes(data, control="fan speed")
 
 
 @dataclass(slots=True)
@@ -447,7 +459,7 @@ class FanDirectionAxis(OnectaModel):
     @classmethod
     def __pre_deserialize__(cls, data: dict[str, Any]) -> dict[str, Any]:
         """Ignore malformed fixed-direction entries without rejecting the device."""
-        return _without_invalid_integer_modes(data)
+        return _without_invalid_integer_modes(data, control="fan direction")
 
 
 @dataclass(slots=True)
